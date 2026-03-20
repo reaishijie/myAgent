@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "esModuleInterop": true, // 让 CommonJS 模块也能用 import xxx from 导入
+    "target": "esnext", // 编译的目标js类型
+    "module": "esnext", // 导入导出写法
+    "moduleResolution": "bundler", // 怎么找依赖 模拟：Bun、Vite、Webpack 的解析方式
+    // "skipLibCheck": true, // 跳过 node_modules 的类型检查, 只检查自己写的代码
+    // "allowSyntheticDefaultImports": true, // 容忍 default 导入
+  }
+}
