@@ -10,6 +10,7 @@ if(!connectionString) {
 
 const client = postgres(process.env.DATABASE_URL!, {
   prepare: false, // ⚠️ serverless 推荐
+  connect_timeout: 3
 })
 
 export const db = drizzle(client, { schema })

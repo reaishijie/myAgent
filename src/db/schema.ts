@@ -12,6 +12,7 @@ export const users = pgTable('users', {
   nickname: varchar('nickname', { length: 30 }),
   password: varchar('password', { length: 255 }).notNull(), // 哈希过的密码
   email: varchar('email', { length: 255 }).unique(),
+  phone: varchar('phone', { length: 15 }).unique(),
   status: userStatusEnum('status').notNull().default('NORMAL'),
   plan: userPlanEnum('plan').notNull().default('FREE'),
   money: numeric('money', { precision: 12, scale: 2 }).default(sql`0`),

@@ -7,7 +7,7 @@
     "build:serverless": "bun build ./src/index.ts --target=node --outfile=dist/index.js",
     "db:generate": "bun --bun drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
-    "db:push": "drizzle-kit push"
+    "db:push": "bun --bun drizzle-kit push"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
