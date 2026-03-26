@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+export PORT="${PORT:-9000}"
+export HOST="${HOST:-0.0.0.0}"
+export PATH="/opt/bin:/opt/bun/bin:$PATH"
+
+if [ ! -x "/opt/bin/bun" ] && [ ! -x "/opt/bun/bin/bun" ]; then
+  echo "bun binary was not found in the attached layer" >&2
+  exit 1
+fi
+
+if [ ! -f "/code/dist/index.js" ]; then
+  echo "dist/index.js is missing, run 'bun run build:fc' before deploy" >&2
+  exit 1
+fi
+
+exec bun /code/dist/index.js

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "build:serverless": "bun build ./src/index.ts --target=node --outfile=dist/index.js",
+    "build:fc": "bun build ./src/index.ts --target=bun --outfile=dist/index.js",
     "db:generate": "bun --bun drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:push": "bun --bun drizzle-kit push"

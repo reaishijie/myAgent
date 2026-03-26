@@ -1,0 +1,54 @@
+edition: 3.0.0
+name: hono-bun-fc
+access: default
+
+vars:
+  region: cn-shanghai
+  serviceName: hono-bun-service
+  functionName: hono-bun-web
+  bunLayerArn: ${env(BUN_LAYER_ARN)}
+
+resources:
+  backend:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: ${vars.functionName}
+      description: Hono + Bun API
+      runtime: custom.debian11
+      code: ./
+      memorySize: 512
+      timeout: 60
+      instanceConcurrency: 20
+      internetAccess: true
+      logConfig:
+        project: myjs
+        logstore: hono
+        enableRequestMetrics: true
+        enableInstanceMetrics: true
+        logBeginRule: DefaultRegex
+      environmentVariables:
+        PORT: "9000"
+        HOST: "0.0.0.0"
+        DATABASE_URL: ${env(DATABASE_URL)}
+      layers:
+        - ${vars.bunLayerArn}
+      customRuntimeConfig:
+        command:
+          - /code/bootstrap
+        port: 9000
+      triggers:
+        - triggerName: httpTrigger
+          triggerType: http
+          qualifier: LATEST
+          triggerConfig:
+            authType: anonymous
+            disableURLInternet: false
+            methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - HEAD
+              - OPTIONS

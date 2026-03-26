@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+.env.example
+node_modules
+src
+README.md
+*.log
+bun-layer.zip

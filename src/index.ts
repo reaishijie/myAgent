@@ -3,6 +3,9 @@ import { Logger } from './utils/logger'
 import { customLogger } from './middleware/httpLogger.middleware'
 import { BusinessException } from './core/exceptions'
 import apiRouter from './routes'
+import { ensureDatabaseReady } from './db/bootstrap'
+
+await ensureDatabaseReady();
 
 const app = new Hono()
 const appLogger = new Logger('APP')
@@ -54,9 +57,11 @@ app.onError((err, c) => {
   }, 500);
 });
 
+const host = process.env.HOST || '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
 
 export default {
+  hostname: host,
   port: port, // 指定运行端口
   fetch: app.fetch, // 绑定 Hono 的请求处理函数
 }
