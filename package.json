@@ -6,19 +6,21 @@
     "dev": "bun run --hot src/index.ts",
     "build:serverless": "bun build ./src/index.ts --target=node --outfile=dist/index.js",
     "build:fc": "bun build ./src/index.ts --target=bun --outfile=dist/index.js",
-    "db:generate": "bun --bun drizzle-kit generate",
-    "db:migrate": "bun run src/db/migrate.ts",
-    "db:push": "bun --bun drizzle-kit push"
+    "db:generate": "bunx --bun prisma generate",
+    "db:push": "bunx --bun prisma db push",
+    "db:migrate:dev": "bunx --bun prisma migrate dev",
+    "db:migrate:deploy": "bunx --bun prisma migrate deploy"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
     "@hono/zod-validator": "^0.7.6",
-    "drizzle-orm": "^0.45.1",
     "hono": "^4.12.8",
-    "postgres": "^3.4.8",
+    "pg": "^8.16.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "drizzle-kit": "^0.31.10"
+    "prisma": "^7.0.0"
   }
 }

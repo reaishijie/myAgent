@@ -1,6 +1,4 @@
-import { eq, or } from 'drizzle-orm';
 import { db } from '../db';
-import { users } from '../db/schema';
 import { BusinessException, NotFoundException } from '../core/exceptions';
 import type { z } from 'zod';
 import type { registerUserSchema } from '../routes/user.route';
@@ -10,11 +8,13 @@ type RegisterDTO = z.infer<typeof registerUserSchema>;
 
 export const UserService = {
     async register(data: RegisterDTO) {
-        const existingUser = await db.query.users.findFirst({
-            where: or(
-                eq(users.username, data.username),
-                data.email ? eq(users.email, data.email) : undefined,
-            ),
+        const existingUser = await db.user.findFirst({
+            where: {
+                OR: [
+                    { username: data.username },
+                    ...(data.email ? [{ email: data.email }] : []),
+                ],
+            },
         });
 
         if (existingUser) {
@@ -31,31 +31,44 @@ export const UserService = {
             cost: 10,
         });
         // 存入数据库
-        const result = await db
-            .insert(users)
-            .values({
+        const result = await db.user.create({
+            data: {
                 username: data.username,
                 nickname: data.nickname,
                 password: hashedPassword,
                 email: data.email,
                 phone: data.phone,
-            })
-            .returning({
-                id: users.id,
-                username: users.username,
-                nickname: users.nickname,
-                plan: users.plan,
-                createdAt: users.createdAt,
-            });
-        return result[0];
+            },
+            select: {
+                id: true,
+                username: true,
+                nickname: true,
+                plan: true,
+                createdAt: true,
+            },
+        });
+        return result;
     },
 
     async getUserByusername(username: string) {
-        const user = await db.query.users.findFirst({
-            where: eq(users.username, username),
-            columns: {
-                password: false
-            }
+        const user = await db.user.findUnique({
+            where: { username },
+            select: {
+                id: true,
+                avatar: true,
+                username: true,
+                nickname: true,
+                email: true,
+                phone: true,
+                status: true,
+                plan: true,
+                money: true,
+                planEndTime: true,
+                role: true,
+                createdAt: true,
+                updatedAt: true,
+                profile: true,
+            },
         })
 
         if(!user) {

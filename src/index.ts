@@ -35,7 +35,7 @@ app.onError((err, c) => {
     }, err.statusCode as any);
   }
 
-  // 情况 2：数据库级别报错 (比如 Drizzle 抛出的唯一索引冲突)
+  // 情况 2：数据库级别报错 (比如 Prisma / PostgreSQL 抛出的唯一索引冲突)
   if ((err as any).code === '23505') {
     errorLogger.warn(`[数据库冲突] ${err.message}`);
     return c.json({
