@@ -3,9 +3,10 @@ name: hono-bun-fc
 access: default
 
 vars:
-  region: cn-shanghai
-  serviceName: hono-bun-service
-  functionName: hono-bun-web
+  region: cn-hongkong
+  serviceName: hono-agent
+  functionName: hono-agent-web
+  description: Hono Agent for deploying to Alibaba Cloud Function Compute
   bunLayerArn: ${env(BUN_LAYER_ARN)}
 
 resources:
@@ -14,16 +15,16 @@ resources:
     props:
       region: ${vars.region}
       functionName: ${vars.functionName}
-      description: Hono + Bun API
+      description: ${vars.description}
       runtime: custom.debian11
       code: ./
-      memorySize: 512
+      memorySize: 256
       timeout: 60
-      instanceConcurrency: 20
+      instanceConcurrency: 10
       internetAccess: true
       logConfig:
-        project: myjs
-        logstore: hono
+        project: javascript-project
+        logstore: hono-agent
         enableRequestMetrics: true
         enableInstanceMetrics: true
         logBeginRule: DefaultRegex
