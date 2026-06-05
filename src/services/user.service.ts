@@ -1,13 +1,16 @@
-import { db } from '../db';
+import { getDb } from '../db';
 import { BusinessException, NotFoundException } from '../core/exceptions';
 import type { z } from 'zod';
 import type { registerUserSchema } from '../routes/user.route';
+import { hashPassword } from '../utils/password';
 
 // 推导出注册的数据类型
 type RegisterDTO = z.infer<typeof registerUserSchema>;
 
 export const UserService = {
     async register(data: RegisterDTO) {
+        const db = getDb();
+
         const existingUser = await db.user.findFirst({
             where: {
                 OR: [
@@ -26,10 +29,7 @@ export const UserService = {
         }
 
         // 密码哈希
-        const hashedPassword = await Bun.password.hash(data.password, {
-            algorithm: 'bcrypt',
-            cost: 10,
-        });
+        const hashedPassword = await hashPassword(data.password);
         // 存入数据库
         const result = await db.user.create({
             data: {
@@ -51,6 +51,8 @@ export const UserService = {
     },
 
     async getUserByusername(username: string) {
+        const db = getDb();
+
         const user = await db.user.findUnique({
             where: { username },
             select: {
@@ -62,7 +64,7 @@ export const UserService = {
                 phone: true,
                 status: true,
                 plan: true,
-                money: true,
+                balance: true,
                 planEndTime: true,
                 role: true,
                 createdAt: true,

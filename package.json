@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
+    "dev:cf": "wrangler dev",
     "build:serverless": "bun build ./src/index.ts --target=node --outfile=dist/index.js",
     "build:fc": "bun build ./src/index.ts --target=bun --outfile=dist/index.js",
+    "deploy:cf": "wrangler deploy",
     "db:generate": "bunx --bun prisma generate",
     "db:push": "bunx --bun prisma db push",
     "db:migrate:dev": "bunx --bun prisma migrate dev",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "prisma": "^7.0.0"
+    "prisma": "^7.0.0",
+    "wrangler": "^4.0.0"
   }
 }
