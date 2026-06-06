@@ -1,0 +1,81 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        required: true
+        default: fc
+        type: choice
+        options:
+          - fc
+          - cloudflare
+
+concurrency:
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.target || 'fc' }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'fc' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'fc' }}
+      BUN_LAYER_ARN: ${{ secrets.BUN_LAYER_ARN }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+
+      - name: Run tests
+        run: bun test
+
+      - name: Build FC bundle
+        if: env.DEPLOY_TARGET == 'fc'
+        run: bun run build:fc
+
+      - name: Install Serverless Devs
+        if: env.DEPLOY_TARGET == 'fc'
+        run: npm install -g @serverless-devs/s
+
+      - name: Configure Alibaba Cloud credentials
+        if: env.DEPLOY_TARGET == 'fc'
+        run: |
+          s config add \
+            -a default \
+            --AccessKeyID "${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}" \
+            --AccessKeySecret "${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}" \
+            --AccountID "${{ secrets.ALIBABA_CLOUD_ACCOUNT_ID }}" \
+            -f
+
+      - name: Deploy to Alibaba Cloud FC
+        if: env.DEPLOY_TARGET == 'fc'
+        run: s deploy -y
+
+      - name: Configure Cloudflare runtime secrets
+        if: env.DEPLOY_TARGET == 'cloudflare'
+        run: printf "%s" "$DATABASE_URL" | bunx wrangler secret put DATABASE_URL
+
+      - name: Deploy to Cloudflare Workers
+        if: env.DEPLOY_TARGET == 'cloudflare'
+        run: bun run deploy:cf
