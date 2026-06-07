@@ -1,9 +1,13 @@
 import { BusinessException } from '../core/exceptions'
-import { normalizeBaseUrl, readJsonResponse, requireConfig, type FetchLike } from './openaiCompatible'
+import { normalizeBaseUrl, normalizeUsage, readJsonResponse, requireConfig, type FetchLike } from './openaiCompatible'
 
 interface EmbeddingResponse {
   data: Array<{ embedding: number[] }>
   model?: string
+  usage?: {
+    prompt_tokens?: number
+    total_tokens?: number
+  }
 }
 
 export const EmbeddingService = {
@@ -28,6 +32,6 @@ export const EmbeddingService = {
       throw new BusinessException('Embedding API returned no vectors', 502, 'EMBEDDING_EMPTY')
     }
 
-    return { embeddings, model }
+    return { embeddings, model, usage: normalizeUsage(body.usage) }
   },
 }

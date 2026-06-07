@@ -98,7 +98,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
         throw new BadRequestException('文档内容不能为空', 'RAG_DOCUMENT_EMPTY')
       }
 
-      const { embeddings, model } = await embed(chunks)
+      const { embeddings, model, usage } = await embed(chunks)
       const document = await resolvedDb.knowledgeDocument.create({ data: { title, content, contentHash } })
 
       for (const [index, chunk] of chunks.entries()) {
@@ -114,6 +114,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
         chunkCount: chunks.length,
         embeddingModel: model,
         duplicated: false,
+        usage: usage ? { embedding: usage } : undefined,
       }
     },
 
@@ -125,7 +126,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
         throw new BadRequestException('问题不能为空', 'RAG_QUESTION_EMPTY')
       }
 
-      const { embeddings } = await embed(question)
+      const { embeddings, usage: embeddingUsage } = await embed(question)
       const queryVector = vectorLiteral(embeddings[0])
 
       const chunks = await resolvedDb.$queryRaw<RetrievedChunk[]>(Prisma.sql`
@@ -144,12 +145,20 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
         return {
           answer: '知识库中没有找到相关内容。',
           sources: [],
+          usage: embeddingUsage ? { embedding: embeddingUsage } : undefined,
         }
       }
 
-      const answer = await chat(buildPrompt(question, chunks))
+      const { answer, usage: chatUsage } = await chat(buildPrompt(question, chunks))
 
-      return { answer, sources: chunks }
+      return {
+        answer,
+        sources: chunks,
+        usage: {
+          ...(embeddingUsage ? { embedding: embeddingUsage } : {}),
+          ...(chatUsage ? { chat: chatUsage } : {}),
+        },
+      }
     },
 
     async *queryStream(input: QueryInput) {

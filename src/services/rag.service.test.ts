@@ -32,13 +32,21 @@ test('createDocument chunks content, embeds chunks, and stores them', async () =
     embed: async (input: string | string[]) => ({
       embeddings: (Array.isArray(input) ? input : [input]).map((_, index) => [index + 1, index + 2]),
       model: 'embedding-model',
+      usage: { promptTokens: 6, totalTokens: 6 },
     }),
     chat: async () => 'unused',
   })
 
   const result = await rag.createDocument({ title: '  demo  ', content: 'abcdefghij' })
 
-  expect(result).toEqual({ id: 7, title: 'demo', chunkCount: 3, embeddingModel: 'embedding-model', duplicated: false })
+  expect(result).toEqual({
+    id: 7,
+    title: 'demo',
+    chunkCount: 3,
+    embeddingModel: 'embedding-model',
+    duplicated: false,
+    usage: { embedding: { promptTokens: 6, totalTokens: 6 } },
+  })
   expect(calls[0]).toEqual({
     method: 'createDocument',
     args: [{ title: 'demo', content: 'abcdefghij', contentHash: expect.any(String) }],
@@ -99,7 +107,7 @@ test('query returns empty sources without calling chat when no chunks exist', as
   let chatCalled = false
   const rag = createRagService({
     db: db as any,
-    embed: async () => ({ embeddings: [[0.1, 0.2]], model: 'embedding-model' }),
+    embed: async () => ({ embeddings: [[0.1, 0.2]], model: 'embedding-model', usage: { promptTokens: 4, totalTokens: 4 } }),
     chat: async () => {
       chatCalled = true
       return 'should not happen'
@@ -109,7 +117,11 @@ test('query returns empty sources without calling chat when no chunks exist', as
   const result = await rag.query({ question: '  what is rag?  ', topK: 5 })
 
   expect(chatCalled).toBe(false)
-  expect(result).toEqual({ answer: '知识库中没有找到相关内容。', sources: [] })
+  expect(result).toEqual({
+    answer: '知识库中没有找到相关内容。',
+    sources: [],
+    usage: { embedding: { promptTokens: 4, totalTokens: 4 } },
+  })
 })
 
 test('query builds sources from retrieved chunks and calls chat', async () => {
@@ -123,10 +135,17 @@ test('query builds sources from retrieved chunks and calls chat', async () => {
   let prompt = ''
   const rag = createRagService({
     db: db as any,
-    embed: async (input: string | string[]) => ({ embeddings: [[0.1, 0.2]], model: 'embedding-model' }),
+    embed: async (input: string | string[]) => ({
+      embeddings: [[0.1, 0.2]],
+      model: 'embedding-model',
+      usage: { promptTokens: 4, totalTokens: 4 },
+    }),
     chat: async (value: string) => {
       prompt = value
-      return 'final answer'
+      return {
+        answer: 'final answer',
+        usage: { promptTokens: 20, completionTokens: 3, totalTokens: 23 },
+      }
     },
   })
 
@@ -143,6 +162,10 @@ test('query builds sources from retrieved chunks and calls chat', async () => {
       { documentId: 1, title: 'doc', chunkIndex: 0, content: 'chunk one' },
       { documentId: 1, title: 'doc', chunkIndex: 1, content: 'chunk two' },
     ],
+    usage: {
+      embedding: { promptTokens: 4, totalTokens: 4 },
+      chat: { promptTokens: 20, completionTokens: 3, totalTokens: 23 },
+    },
   })
 })
 

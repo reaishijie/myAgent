@@ -2,6 +2,12 @@ import { BusinessException } from '../core/exceptions'
 
 export type FetchLike = typeof fetch
 
+interface OpenAiUsage {
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
+}
+
 export const normalizeBaseUrl = (baseUrl: string) => baseUrl.replace(/\/+$/, '')
 
 export const requireConfig = (value: string | undefined, name: string) => {
@@ -21,4 +27,14 @@ export const readJsonResponse = async <T>(response: Response, providerName: stri
   }
 
   return body as T
+}
+
+export const normalizeUsage = (usage?: OpenAiUsage) => {
+  if (!usage) return undefined
+
+  return {
+    promptTokens: usage.prompt_tokens,
+    completionTokens: usage.completion_tokens,
+    totalTokens: usage.total_tokens,
+  }
 }

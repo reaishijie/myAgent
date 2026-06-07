@@ -1,8 +1,13 @@
 import { BusinessException } from '../core/exceptions'
-import { normalizeBaseUrl, readJsonResponse, requireConfig, type FetchLike } from './openaiCompatible'
+import { normalizeBaseUrl, normalizeUsage, readJsonResponse, requireConfig, type FetchLike } from './openaiCompatible'
 
 interface ChatResponse {
   choices: Array<{ message?: { content?: string } }>
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+  }
 }
 
 interface ChatStreamResponse {
@@ -66,7 +71,7 @@ export const LlmService = {
       throw new BusinessException('Chat API returned no answer', 502, 'CHAT_EMPTY')
     }
 
-    return answer
+    return { answer, usage: normalizeUsage(body.usage) }
   },
 
   async *streamChat(prompt: string, fetchImpl: FetchLike = fetch) {
