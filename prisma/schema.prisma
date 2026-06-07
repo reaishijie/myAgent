@@ -45,3 +45,32 @@ model User {
   @@index([plan, planEndTime], map: "user_plan_time_idx")
   @@map("users")
 }
+
+model KnowledgeDocument {
+  id        Int              @id @default(autoincrement())
+  title     String           @db.VarChar(120)
+  content   String
+  metadata  Json?
+  createdAt DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  chunks    KnowledgeChunk[]
+
+  @@index([createdAt], map: "knowledge_document_created_idx")
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id             Int               @id @default(autoincrement())
+  documentId     Int               @map("document_id")
+  chunkIndex     Int               @map("chunk_index")
+  content        String
+  embedding      Unsupported("vector")
+  embeddingModel String            @map("embedding_model") @db.VarChar(120)
+  tokenCount     Int?              @map("token_count")
+  createdAt      DateTime?         @default(now()) @map("created_at") @db.Timestamp(6)
+  document       KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex], map: "knowledge_chunk_document_index_unique")
+  @@index([documentId], map: "knowledge_chunk_document_idx")
+  @@map("knowledge_chunks")
+}
