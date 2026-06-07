@@ -7,6 +7,7 @@
 - 用户注册接口
 - 用户查询接口
 - Prisma Schema 管理
+- 最小 RAG 文档入库与问答接口
 - 阿里云函数计算 FC 部署配置
 - Cloudflare Workers 部署配置
 - GitHub Actions 手动选择部署目标
@@ -37,6 +38,14 @@ cp .env.example .env
 ```env
 PORT='9889'
 DATABASE_URL='postgres://postgres:root123456@127.0.0.1:5432/hono'
+OPENAI_CHAT_API_KEY=''
+OPENAI_CHAT_BASE_URL='https://api.openai.com/v1'
+OPENAI_CHAT_MODEL=''
+OPENAI_EMBEDDING_API_KEY=''
+OPENAI_EMBEDDING_BASE_URL='https://api.openai.com/v1'
+OPENAI_EMBEDDING_MODEL='text-embedding-3-small'
+RAG_CHUNK_SIZE='800'
+RAG_CHUNK_OVERLAP='120'
 ```
 
 生成 Prisma Client：
@@ -155,6 +164,20 @@ Content-Type: application/json
 
 ```http
 GET /api/users/:username
+```
+
+RAG 入库：
+
+```http
+POST /api/rag/documents
+Content-Type: application/json
+```
+
+RAG 问答：
+
+```http
+POST /api/rag/query
+Content-Type: application/json
 ```
 
 ## 项目结构
