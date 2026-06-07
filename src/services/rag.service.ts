@@ -23,7 +23,7 @@ interface RetrievedChunk {
 }
 
 interface RagDependencies {
-  db: ReturnType<typeof getDb>
+  db?: ReturnType<typeof getDb>
   embed: typeof EmbeddingService.embed
   chat: typeof LlmService.chat
 }
@@ -42,17 +42,17 @@ const buildPrompt = (question: string, chunks: RetrievedChunk[]) => {
 }
 
 const createDefaultDependencies = (): RagDependencies => ({
-  db: getDb(),
   embed: EmbeddingService.embed,
   chat: LlmService.chat,
 })
 
 export const createRagService = (dependencies: Partial<RagDependencies> = {}) => {
   const base = createDefaultDependencies()
-  const { db = base.db, embed = base.embed, chat = base.chat } = dependencies
+  const { db, embed = base.embed, chat = base.chat } = dependencies
 
   return {
     async createDocument(input: CreateDocumentInput) {
+      const resolvedDb = db ?? getDb()
       const title = input.title.trim()
       const content = input.content.trim()
 
@@ -69,10 +69,10 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
       }
 
       const { embeddings, model } = await embed(chunks)
-      const document = await db.knowledgeDocument.create({ data: { title, content } })
+      const document = await resolvedDb.knowledgeDocument.create({ data: { title, content } })
 
       for (const [index, chunk] of chunks.entries()) {
-        await db.$executeRaw`
+        await resolvedDb.$executeRaw`
           INSERT INTO knowledge_chunks (document_id, chunk_index, content, embedding, embedding_model, token_count)
           VALUES (${document.id}, ${index}, ${chunk}, ${vectorLiteral(embeddings[index])}::vector, ${model}, ${chunk.length})
         `
@@ -87,6 +87,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
     },
 
     async query(input: QueryInput) {
+      const resolvedDb = db ?? getDb()
       const question = input.question.trim()
 
       if (!question) {
@@ -96,7 +97,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
       const { embeddings } = await embed(question)
       const queryVector = vectorLiteral(embeddings[0])
 
-      const chunks = await db.$queryRaw<RetrievedChunk[]>(Prisma.sql`
+      const chunks = await resolvedDb.$queryRaw<RetrievedChunk[]>(Prisma.sql`
         SELECT
           c.document_id AS "documentId",
           d.title AS "title",
