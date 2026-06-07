@@ -27,6 +27,7 @@ interface RagDependencies {
   db?: ReturnType<typeof getDb>
   embed: typeof EmbeddingService.embed
   chat: typeof LlmService.chat
+  streamChat: typeof LlmService.streamChat
 }
 
 const parsePositiveInt = (value: string | undefined, fallback: number) => {
@@ -47,11 +48,12 @@ const buildPrompt = (question: string, chunks: RetrievedChunk[]) => {
 const createDefaultDependencies = (): RagDependencies => ({
   embed: EmbeddingService.embed,
   chat: LlmService.chat,
+  streamChat: LlmService.streamChat,
 })
 
 export const createRagService = (dependencies: Partial<RagDependencies> = {}) => {
   const base = createDefaultDependencies()
-  const { db, embed = base.embed, chat = base.chat } = dependencies
+  const { db, embed = base.embed, chat = base.chat, streamChat = base.streamChat } = dependencies
 
   return {
     async createDocument(input: CreateDocumentInput) {
@@ -148,6 +150,44 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
       const answer = await chat(buildPrompt(question, chunks))
 
       return { answer, sources: chunks }
+    },
+
+    async *queryStream(input: QueryInput) {
+      const resolvedDb = db ?? getDb()
+      const question = input.question.trim()
+
+      if (!question) {
+        throw new BadRequestException('问题不能为空', 'RAG_QUESTION_EMPTY')
+      }
+
+      const { embeddings } = await embed(question)
+      const queryVector = vectorLiteral(embeddings[0])
+
+      const chunks = await resolvedDb.$queryRaw<RetrievedChunk[]>(Prisma.sql`
+        SELECT
+          c.document_id AS "documentId",
+          d.title AS "title",
+          c.chunk_index AS "chunkIndex",
+          c.content AS "content"
+        FROM knowledge_chunks c
+        JOIN knowledge_documents d ON d.id = c.document_id
+        ORDER BY c.embedding <=> ${queryVector}::vector
+        LIMIT ${input.topK}
+      `)
+
+      yield { type: 'sources' as const, sources: chunks }
+
+      if (chunks.length === 0) {
+        yield { type: 'delta' as const, content: '知识库中没有找到相关内容。' }
+        yield { type: 'done' as const }
+        return
+      }
+
+      for await (const content of streamChat(buildPrompt(question, chunks))) {
+        yield { type: 'delta' as const, content }
+      }
+
+      yield { type: 'done' as const }
     },
   }
 }

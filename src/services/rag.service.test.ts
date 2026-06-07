@@ -146,6 +146,36 @@ test('query builds sources from retrieved chunks and calls chat', async () => {
   })
 })
 
+test('queryStream yields sources before chat deltas', async () => {
+  const db = {
+    $queryRaw: async () => [
+      { documentId: 1, title: 'doc', chunkIndex: 0, content: 'chunk one' },
+    ],
+  }
+
+  const rag = createRagService({
+    db: db as any,
+    embed: async () => ({ embeddings: [[0.1, 0.2]], model: 'embedding-model' }),
+    chat: async () => 'unused',
+    streamChat: async function* () {
+      yield '你'
+      yield '好'
+    },
+  })
+
+  const events = []
+  for await (const event of rag.queryStream({ question: 'what is rag?', topK: 1 })) {
+    events.push(event)
+  }
+
+  expect(events).toEqual([
+    { type: 'sources', sources: [{ documentId: 1, title: 'doc', chunkIndex: 0, content: 'chunk one' }] },
+    { type: 'delta', content: '你' },
+    { type: 'delta', content: '好' },
+    { type: 'done' },
+  ])
+})
+
 test('RagService export is available', () => {
   expect(RagService).toBeDefined()
 })

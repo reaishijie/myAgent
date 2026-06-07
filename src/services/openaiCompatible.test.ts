@@ -68,3 +68,38 @@ test('LlmService uses chat-specific configuration', async () => {
     temperature: 0.2,
   })
 })
+
+test('LlmService streams chat deltas from OpenAI-compatible SSE', async () => {
+  process.env.OPENAI_CHAT_API_KEY = 'chat-key'
+  process.env.OPENAI_CHAT_BASE_URL = 'https://chat.example/v1/'
+  process.env.OPENAI_CHAT_MODEL = 'chat-model'
+
+  const encoder = new TextEncoder()
+  const calls: Array<{ url: string; init: RequestInit }> = []
+  const fetchImpl = async (url: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(url), init: init ?? {} })
+
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"你"}}]}\n\n'))
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"好"}}]}\n\n'))
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        controller.close()
+      },
+    }), { status: 200 })
+  }
+
+  const chunks: string[] = []
+  for await (const chunk of LlmService.streamChat('question', fetchImpl as typeof fetch)) {
+    chunks.push(chunk)
+  }
+
+  expect(chunks).toEqual(['你', '好'])
+  expect(calls[0].url).toBe('https://chat.example/v1/chat/completions')
+  expect(JSON.parse(String(calls[0].init.body))).toEqual({
+    model: 'chat-model',
+    messages: [{ role: 'user', content: 'question' }],
+    temperature: 0.2,
+    stream: true,
+  })
+})

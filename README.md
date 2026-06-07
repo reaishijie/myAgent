@@ -180,6 +180,14 @@ POST /api/rag/query
 Content-Type: application/json
 ```
 
+RAG 流式问答：
+
+```http
+POST /api/rag/query/stream
+Content-Type: application/json
+Accept: text/event-stream
+```
+
 ## 项目结构
 
 ```text

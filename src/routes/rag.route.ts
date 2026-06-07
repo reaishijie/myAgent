@@ -30,4 +30,32 @@ ragApp.post('/query', zValidator('json', querySchema), async (c) => {
   return c.json(ApiResponse.success(result))
 })
 
+ragApp.post('/query/stream', zValidator('json', querySchema), async (c) => {
+  const data = c.req.valid('json')
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const event of RagService.queryStream(data)) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Stream failed'
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`))
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'cache-control': 'no-cache',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream; charset=utf-8',
+    },
+  })
+})
+
 export default ragApp
