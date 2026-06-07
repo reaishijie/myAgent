@@ -133,6 +133,8 @@ test('query builds sources from retrieved chunks and calls chat', async () => {
   const result = await rag.query({ question: 'what is rag?', topK: 2 })
 
   expect(prompt).toContain('Context:')
+  expect(prompt).toContain('可以根据上下文、中文常识或常见语言习惯进行合理推断')
+  expect(prompt).toContain('必须明确说明这是推断')
   expect(prompt).toContain('chunk one')
   expect(prompt).toContain('Question: what is rag?')
   expect(result).toEqual({

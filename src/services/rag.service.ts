@@ -41,7 +41,7 @@ const hashContent = (content: string) => createHash('sha256').update(content).di
 const buildPrompt = (question: string, chunks: RetrievedChunk[]) => {
   const context = chunks.map((chunk, index) => `[${index + 1}] ${chunk.content}`).join('\n\n')
 
-  return `You are a question-answering assistant. Answer using only the provided context. If the context does not contain the answer, say that the knowledge base does not contain relevant information.\n\nContext:\n${context}\n\nQuestion: ${question}`
+  return `你是一个问答助手。请优先依据提供的上下文回答。\n如果上下文没有直接给出答案，但可以根据上下文、中文常识或常见语言习惯进行合理推断，请回答推断结果，并且必须明确说明这是推断。\n如果无法合理推断，再说明知识库中没有相关内容。\n\nContext:\n${context}\n\nQuestion: ${question}`
 }
 
 const createDefaultDependencies = (): RagDependencies => ({
