@@ -50,6 +50,7 @@ model KnowledgeDocument {
   id        Int              @id @default(autoincrement())
   title     String           @db.VarChar(120)
   content   String
+  contentHash String?        @unique @map("content_hash") @db.VarChar(64)
   metadata  Json?
   createdAt DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)

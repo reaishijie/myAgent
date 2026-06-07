@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client'
+import { createHash } from 'node:crypto'
 import { BadRequestException } from '../core/exceptions'
 import { getDb } from '../db'
 import { chunkText } from '../utils/chunkText'
@@ -35,6 +36,8 @@ const parsePositiveInt = (value: string | undefined, fallback: number) => {
 
 const vectorLiteral = (embedding: number[]) => `[${embedding.join(',')}]`
 
+const hashContent = (content: string) => createHash('sha256').update(content).digest('hex')
+
 const buildPrompt = (question: string, chunks: RetrievedChunk[]) => {
   const context = chunks.map((chunk, index) => `[${index + 1}] ${chunk.content}`).join('\n\n')
 
@@ -60,6 +63,31 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
         throw new BadRequestException('文档内容不能为空', 'RAG_DOCUMENT_EMPTY')
       }
 
+      const contentHash = hashContent(content)
+      const existingDocument = await resolvedDb.knowledgeDocument.findUnique({
+        where: { contentHash },
+        select: { id: true, title: true },
+      })
+
+      if (existingDocument) {
+        const [chunkCount, firstChunk] = await Promise.all([
+          resolvedDb.knowledgeChunk.count({ where: { documentId: existingDocument.id } }),
+          resolvedDb.knowledgeChunk.findFirst({
+            where: { documentId: existingDocument.id },
+            orderBy: { chunkIndex: 'asc' },
+            select: { embeddingModel: true },
+          }),
+        ])
+
+        return {
+          id: existingDocument.id,
+          title: existingDocument.title,
+          chunkCount,
+          embeddingModel: firstChunk?.embeddingModel ?? null,
+          duplicated: true,
+        }
+      }
+
       const chunkSize = parsePositiveInt(process.env.RAG_CHUNK_SIZE, 800)
       const overlap = parsePositiveInt(process.env.RAG_CHUNK_OVERLAP, 120)
       const chunks = chunkText(content, { chunkSize, overlap })
@@ -69,7 +97,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
       }
 
       const { embeddings, model } = await embed(chunks)
-      const document = await resolvedDb.knowledgeDocument.create({ data: { title, content } })
+      const document = await resolvedDb.knowledgeDocument.create({ data: { title, content, contentHash } })
 
       for (const [index, chunk] of chunks.entries()) {
         await resolvedDb.$executeRaw`
@@ -83,6 +111,7 @@ export const createRagService = (dependencies: Partial<RagDependencies> = {}) =>
         title: document.title,
         chunkCount: chunks.length,
         embeddingModel: model,
+        duplicated: false,
       }
     },
 

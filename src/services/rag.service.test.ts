@@ -8,10 +8,15 @@ test('createDocument chunks content, embeds chunks, and stores them', async () =
   const calls: Array<{ method: string; args: unknown[] }> = []
   const db = {
     knowledgeDocument: {
+      findUnique: async () => null,
       create: async ({ data }: any) => {
         calls.push({ method: 'createDocument', args: [data] })
         return { id: 7, title: data.title }
       },
+    },
+    knowledgeChunk: {
+      count: async () => 0,
+      findFirst: async () => null,
     },
     $executeRaw: async (...args: unknown[]) => {
       calls.push({ method: 'executeRaw', args })
@@ -33,9 +38,57 @@ test('createDocument chunks content, embeds chunks, and stores them', async () =
 
   const result = await rag.createDocument({ title: '  demo  ', content: 'abcdefghij' })
 
-  expect(result).toEqual({ id: 7, title: 'demo', chunkCount: 3, embeddingModel: 'embedding-model' })
-  expect(calls[0]).toEqual({ method: 'createDocument', args: [{ title: 'demo', content: 'abcdefghij' }] })
+  expect(result).toEqual({ id: 7, title: 'demo', chunkCount: 3, embeddingModel: 'embedding-model', duplicated: false })
+  expect(calls[0]).toEqual({
+    method: 'createDocument',
+    args: [{ title: 'demo', content: 'abcdefghij', contentHash: expect.any(String) }],
+  })
   expect(calls.filter((call) => call.method === 'executeRaw')).toHaveLength(3)
+})
+
+test('createDocument returns existing document when content hash already exists', async () => {
+  let embedCalled = false
+  let createCalled = false
+  const db = {
+    knowledgeDocument: {
+      findUnique: async () => ({ id: 11, title: 'existing doc' }),
+      create: async () => {
+        createCalled = true
+        throw new Error('create should not be called')
+      },
+    },
+    knowledgeChunk: {
+      count: async () => 2,
+      findFirst: async () => ({ embeddingModel: 'embedding-model' }),
+    },
+    $executeRaw: async () => {
+      throw new Error('insert should not be called')
+    },
+    $queryRaw: async () => {
+      throw new Error('query should not be called')
+    },
+  }
+
+  const rag = createRagService({
+    db: db as any,
+    embed: async () => {
+      embedCalled = true
+      return { embeddings: [[0.1, 0.2]], model: 'embedding-model' }
+    },
+    chat: async () => 'unused',
+  })
+
+  const result = await rag.createDocument({ title: 'new title', content: 'same content' })
+
+  expect(embedCalled).toBe(false)
+  expect(createCalled).toBe(false)
+  expect(result).toEqual({
+    id: 11,
+    title: 'existing doc',
+    chunkCount: 2,
+    embeddingModel: 'embedding-model',
+    duplicated: true,
+  })
 })
 
 test('query returns empty sources without calling chat when no chunks exist', async () => {
