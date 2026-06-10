@@ -40,3 +40,11 @@ export const hashPassword = async (password: string) => {
 
   return hashWithWebCrypto(password)
 }
+
+export const verifyPassword = async (password: string, hash: string) => {
+  if ('Bun' in globalThis) {
+    return Bun.password.verify(password, hash)
+  }
+
+  return false
+}
