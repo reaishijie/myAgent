@@ -1,10 +1,38 @@
 import { getDb } from '../db'
 import { NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
+
+const assetFilterKeys = [
+  'type',
+  'status',
+  'generationJobId',
+  'conversationId',
+  'modelInvocationId',
+  'modelId',
+]
+
+const buildAssetWhere = (filters: ResourceFilters = {}, userId?: number) => ({
+  deletedAt: null,
+  ...pickFilters(filters, [...assetFilterKeys, ...(userId ? [] : ['userId']), 'id']),
+  ...(userId ? { userId } : {}),
+  ...createdAtRange(filters),
+})
 
 export const AssetService = {
-  list(userId: number) {
-    return getDb().asset.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: Pick<ReturnType<typeof getDb>, 'asset'>, userId: number, filters: ResourceFilters = {}) {
+    return db.asset.findMany({
+      where: buildAssetWhere(filters, userId),
+      orderBy: { id: 'desc' },
+    })
+  },
+
+  listForAdmin(db: Pick<ReturnType<typeof getDb>, 'asset'>, filters: ResourceFilters = {}) {
+    return db.asset.findMany({
+      where: buildAssetWhere(filters),
       orderBy: { id: 'desc' },
     })
   },

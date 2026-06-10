@@ -20,7 +20,7 @@ const userSkillSchema = z.object({
 const app = new Hono<{ Variables: AppVariables }>()
 app.use('*', authMiddleware())
 
-app.get('/', async (c) => c.json(ApiResponse.success(await UserSkillService.list(c.get('currentUser').id))))
+app.get('/', async (c) => c.json(ApiResponse.success(await UserSkillService.list(c.get('currentUser').id, c.req.query()))))
 app.post('/', zValidator('json', userSkillSchema), async (c) => {
   const record = await UserSkillService.create(c.get('currentUser').id, c.req.valid('json'))
   return c.json(ApiResponse.success(record, 'created', 201), 201)

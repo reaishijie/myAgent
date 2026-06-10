@@ -1,10 +1,31 @@
 import { getDb } from '../db'
 import { NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
+
+const generationJobFilterKeys = ['modelId', 'capability', 'status']
+
+const buildGenerationJobWhere = (filters: ResourceFilters = {}, userId?: number) => ({
+  deletedAt: null,
+  ...pickFilters(filters, [...generationJobFilterKeys, ...(userId ? [] : ['userId']), 'id']),
+  ...(userId ? { userId } : {}),
+  ...createdAtRange(filters),
+})
 
 export const GenerationJobService = {
-  list(userId: number) {
-    return getDb().generationJob.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: Pick<ReturnType<typeof getDb>, 'generationJob'>, userId: number, filters: ResourceFilters = {}) {
+    return db.generationJob.findMany({
+      where: buildGenerationJobWhere(filters, userId),
+      orderBy: { id: 'desc' },
+    })
+  },
+
+  listForAdmin(db: Pick<ReturnType<typeof getDb>, 'generationJob'>, filters: ResourceFilters = {}) {
+    return db.generationJob.findMany({
+      where: buildGenerationJobWhere(filters),
       orderBy: { id: 'desc' },
     })
   },

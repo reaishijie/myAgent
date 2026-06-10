@@ -1,4 +1,8 @@
 import { getDb } from '../db'
-import { createCrudService } from './crud.service'
+import { createFilteredCrudService } from './filteredCrud.service'
 
-export const ModelPriceService = createCrudService(() => getDb().modelPrice, 'model price')
+export const ModelPriceService = createFilteredCrudService(
+  () => getDb().modelPrice,
+  'model price',
+  ['id', 'modelId', 'channelId', 'capability', 'unit', 'status'],
+)

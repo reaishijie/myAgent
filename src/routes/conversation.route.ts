@@ -42,7 +42,7 @@ const conversationSkillSchema = z.object({
 const app = new Hono<{ Variables: AppVariables }>()
 app.use('*', authMiddleware())
 
-app.get('/', async (c) => c.json(ApiResponse.success(await ConversationService.list(c.get('currentUser').id))))
+app.get('/', async (c) => c.json(ApiResponse.success(await ConversationService.list(c.get('currentUser').id, c.req.query()))))
 app.post('/', zValidator('json', conversationSchema), async (c) => {
   const record = await ConversationService.createForUser(c.get('currentUser').id, c.req.valid('json'))
   return c.json(ApiResponse.success(record, 'created', 201), 201)
@@ -71,7 +71,7 @@ app.patch('/:id/move', zValidator('param', idSchema), zValidator('json', moveSch
   return c.json(ApiResponse.success(record))
 })
 app.get('/:id/messages', zValidator('param', idSchema), async (c) => {
-  const records = await ConversationService.listMessages(c.get('currentUser').id, c.req.valid('param').id)
+  const records = await ConversationService.listMessages(c.get('currentUser').id, c.req.valid('param').id, c.req.query())
   return c.json(ApiResponse.success(records))
 })
 app.post('/:id/messages', zValidator('param', idSchema), zValidator('json', messageSchema), async (c) => {
@@ -84,7 +84,7 @@ app.delete('/:id/messages/:messageId', zValidator('param', messageIdSchema), asy
   return c.json(ApiResponse.ok('deleted'))
 })
 app.get('/:id/skills', zValidator('param', idSchema), async (c) => {
-  return c.json(ApiResponse.success(await ConversationService.listSkills(c.get('currentUser').id, c.req.valid('param').id)))
+  return c.json(ApiResponse.success(await ConversationService.listSkills(c.get('currentUser').id, c.req.valid('param').id, c.req.query())))
 })
 app.post('/:id/skills', zValidator('param', idSchema), zValidator('json', conversationSkillSchema), async (c) => {
   const record = await ConversationService.createSkill(c.get('currentUser').id, c.req.valid('param').id, c.req.valid('json'))

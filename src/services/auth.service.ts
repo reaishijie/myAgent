@@ -6,6 +6,7 @@ import { verifyPassword as defaultVerifyPassword } from '../utils/password'
 import { createTokenManager, type TokenManager } from '../utils/token'
 
 const REFRESH_TOKEN_TTL_DAYS = 30
+const DEFAULT_MAX_ACTIVE_SESSIONS = 5
 
 export interface LoginDTO {
   username: string
@@ -40,11 +41,13 @@ export const createAuthService = (deps: {
   verifyPassword?: (password: string, hash: string) => Promise<boolean>
   tokenManager?: TokenManager
   now?: () => Date
+  maxActiveSessions?: number
 } = {}) => {
   const getDbClient = () => deps.db ?? getDb()
   const verifyPassword = deps.verifyPassword ?? defaultVerifyPassword
   const tokenManager = deps.tokenManager ?? createTokenManager()
   const now = deps.now ?? (() => new Date())
+  const maxActiveSessions = deps.maxActiveSessions ?? DEFAULT_MAX_ACTIVE_SESSIONS
 
   const createTokenPair = async (user: Pick<User, 'id' | 'username' | 'role'>, session: UserSession) => {
     const authUser = toAuthUser(user, session.id)
@@ -85,6 +88,30 @@ export const createAuthService = (deps: {
           lastSeenAt: now(),
         },
       })
+      const activeSessions = await db.userSession.findMany({
+        where: {
+          userId: user.id,
+          status: UserSessionStatus.ACTIVE,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      })
+
+      if (activeSessions.length > maxActiveSessions) {
+        await db.userSession.updateMany({
+          where: {
+            userId: user.id,
+            status: UserSessionStatus.ACTIVE,
+            id: {
+              in: activeSessions.slice(maxActiveSessions).map((item) => item.id),
+            },
+          },
+          data: {
+            status: UserSessionStatus.REVOKED,
+            revokedAt: now(),
+          },
+        })
+      }
       const tokenPair = await createTokenPair(user, session)
 
       return {

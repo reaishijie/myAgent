@@ -2,6 +2,7 @@ import { getDb } from '../db'
 import { encryptSecret, decryptSecret } from '../utils/cryptoSecret'
 import { maskSecret } from '../utils/maskSecret'
 import { createCrudService } from './crud.service'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
 
 const sanitizeChannel = async (channel: any) => {
   const apiKey = await decryptSecret(channel.apiKeyEncrypted).catch(() => '')
@@ -16,8 +17,11 @@ const sanitizeChannel = async (channel: any) => {
 export const ModelChannelService = {
   base: createCrudService(() => getDb().modelChannel, 'model channel'),
 
-  async list() {
-    const channels = await this.base.list()
+  async list(filters: ResourceFilters = {}) {
+    const channels = await this.base.list({
+      ...pickFilters(filters, ['id', 'provider', 'protocol', 'status']),
+      ...createdAtRange(filters),
+    })
     return Promise.all(channels.map(sanitizeChannel))
   },
 

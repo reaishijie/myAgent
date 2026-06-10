@@ -1,10 +1,20 @@
 import { getDb } from '../db'
 import { NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
 
 export const UserDefaultSkillService = {
-  list(userId: number) {
-    return getDb().userDefaultSkill.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: Pick<ReturnType<typeof getDb>, 'userDefaultSkill'>, userId: number, filters: ResourceFilters = {}) {
+    return db.userDefaultSkill.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        ...pickFilters(filters, ['id', 'userSkillId', 'status']),
+        ...createdAtRange(filters),
+      },
       orderBy: { sort: 'asc' },
     })
   },

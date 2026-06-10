@@ -10,7 +10,7 @@ const idSchema = z.object({
 
 export const createAdminCrudRoute = (
   service: {
-    list(): Promise<unknown>
+    list(filters?: Record<string, unknown>): Promise<unknown>
     get(id: number): Promise<unknown>
     create(data: Record<string, unknown>): Promise<unknown>
     update(id: number, data: Record<string, unknown>): Promise<unknown>
@@ -21,7 +21,7 @@ export const createAdminCrudRoute = (
 ) => {
   const app = new Hono<{ Variables: AppVariables }>()
 
-  app.get('/', async (c) => c.json(ApiResponse.success(await service.list())))
+  app.get('/', async (c) => c.json(ApiResponse.success(await service.list(c.req.query()))))
 
   app.get('/:id', zValidator('param', idSchema), async (c) => {
     const { id } = c.req.valid('param')

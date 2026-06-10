@@ -22,7 +22,7 @@ const createFakeDb = () => {
     },
     userSession: {
       create: async ({ data }: any) => {
-        const session = { id: state.sessions.length + 1, ...data }
+        const session = { id: state.sessions.length + 1, status: 'ACTIVE', createdAt: new Date(), ...data }
         state.sessions.push(session)
         return session
       },
@@ -33,7 +33,40 @@ const createFakeDb = () => {
         Object.assign(session, data)
         return session
       },
-      findMany: async () => state.sessions,
+      findMany: async ({ where, orderBy }: any = {}) => {
+        let sessions = state.sessions.filter((session) => {
+          if (!where) {
+            return true
+          }
+
+          return Object.entries(where).every(([key, value]) => session[key] === value)
+        })
+
+        if (orderBy?.createdAt === 'desc') {
+          sessions = [...sessions].sort((a, b) => {
+            const left = a.createdAt?.getTime?.() ?? a.id
+            const right = b.createdAt?.getTime?.() ?? b.id
+            return right - left
+          })
+        }
+
+        return sessions
+      },
+      updateMany: async ({ where, data }: any) => {
+        let count = 0
+        for (const session of state.sessions) {
+          const matches =
+            session.userId === where.userId &&
+            session.status === where.status &&
+            (!where.id?.in || where.id.in.includes(session.id))
+
+          if (matches) {
+            Object.assign(session, data)
+            count += 1
+          }
+        }
+        return { count }
+      },
     },
   }
 
@@ -114,5 +147,28 @@ describe('AuthService', () => {
 
     expect(state.sessions[0].status).toBe('REVOKED')
     expect(state.sessions[0].revokedAt).toEqual(new Date('2026-01-01T00:00:00.000Z'))
+  })
+
+  test('login revokes oldest active sessions when device limit is exceeded', async () => {
+    const { db, state } = createFakeDb()
+    state.sessions.push(
+      { id: 1, userId: 1, status: 'ACTIVE', createdAt: new Date('2026-01-01T00:00:00.000Z') },
+      { id: 2, userId: 1, status: 'ACTIVE', createdAt: new Date('2026-01-02T00:00:00.000Z') },
+    )
+    const service = createAuthService({
+      db: db as any,
+      verifyPassword: async () => true,
+      tokenManager: {
+        signAccessToken: async () => 'access-token',
+        createRefreshToken: async () => ({ token: 'refresh-token', hash: 'refresh-hash' }),
+      } as any,
+      now: () => new Date('2026-01-03T00:00:00.000Z'),
+      maxActiveSessions: 2,
+    })
+
+    await service.login({ username: 'alice', password: 'secret' })
+
+    expect(state.sessions.map((session) => session.status)).toEqual(['REVOKED', 'ACTIVE', 'ACTIVE'])
+    expect(state.sessions[0].revokedAt).toEqual(new Date('2026-01-03T00:00:00.000Z'))
   })
 })

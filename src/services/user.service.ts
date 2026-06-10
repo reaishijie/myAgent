@@ -1,15 +1,26 @@
+import type { PrismaClient } from '@prisma/client'
+import { ConversationGroupType } from '@prisma/client'
 import { getDb } from '../db';
 import { BusinessException, NotFoundException } from '../core/exceptions';
 import type { z } from 'zod';
 import type { registerUserSchema } from '../routes/user.route';
-import { hashPassword } from '../utils/password';
+import { hashPassword as defaultHashPassword } from '../utils/password';
 
 // 推导出注册的数据类型
 type RegisterDTO = z.infer<typeof registerUserSchema>;
 
-export const UserService = {
+type UserDb = Pick<PrismaClient, 'user' | 'conversationGroup'>
+
+export const createUserService = (deps: {
+    db?: UserDb
+    hashPassword?: (password: string) => Promise<string>
+} = {}) => {
+    const getDbClient = () => deps.db ?? getDb()
+    const hashPassword = deps.hashPassword ?? defaultHashPassword
+
+    return {
     async register(data: RegisterDTO) {
-        const db = getDb();
+        const db = getDbClient();
 
         const existingUser = await db.user.findFirst({
             where: {
@@ -47,11 +58,19 @@ export const UserService = {
                 createdAt: true,
             },
         });
+        await db.conversationGroup.create({
+            data: {
+                userId: result.id,
+                name: 'Archive',
+                type: ConversationGroupType.ARCHIVE,
+                sort: 9999,
+            },
+        })
         return result;
     },
 
     async getUserByusername(username: string) {
-        const db = getDb();
+        const db = getDbClient();
 
         const user = await db.user.findUnique({
             where: { username },
@@ -78,4 +97,7 @@ export const UserService = {
         }
         return user
     },
+    }
 };
+
+export const UserService = createUserService()

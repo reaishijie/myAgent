@@ -18,7 +18,7 @@ const schema = z.object({
 const app = new Hono<{ Variables: AppVariables }>()
 app.use('*', authMiddleware())
 
-app.get('/', async (c) => c.json(ApiResponse.success(await ConversationGroupService.list(c.get('currentUser').id))))
+app.get('/', async (c) => c.json(ApiResponse.success(await ConversationGroupService.list(c.get('currentUser').id, c.req.query()))))
 app.post('/', zValidator('json', schema), async (c) => {
   const record = await ConversationGroupService.create(c.get('currentUser').id, c.req.valid('json'))
   return c.json(ApiResponse.success(record, 'created', 201), 201)

@@ -1,11 +1,21 @@
 import { RecordStatus } from '@prisma/client'
 import { getDb } from '../db'
 import { NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
 
 export const UserSkillService = {
-  list(userId: number) {
-    return getDb().userSkill.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: Pick<ReturnType<typeof getDb>, 'userSkill'>, userId: number, filters: ResourceFilters = {}) {
+    return db.userSkill.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        ...pickFilters(filters, ['id', 'skillId', 'source', 'status']),
+        ...createdAtRange(filters),
+      },
       orderBy: { id: 'desc' },
     })
   },

@@ -1,7 +1,8 @@
 import { getDb } from '../db'
-import { createCrudService } from './crud.service'
+import { createFilteredCrudService } from './filteredCrud.service'
 
-export const ModelChannelBindingService = createCrudService(
+export const ModelChannelBindingService = createFilteredCrudService(
   () => getDb().modelChannelBinding,
   'model channel binding',
+  ['id', 'modelId', 'channelId', 'status'],
 )

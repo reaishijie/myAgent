@@ -1,6 +1,7 @@
 import { LifecycleStatus, RecordStatus } from '@prisma/client'
 import { getDb } from '../db'
 import { BadRequestException, NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
 
 type ConversationDb = Pick<
   ReturnType<typeof getDb>,
@@ -24,9 +25,19 @@ const ensureActiveConversation = async (db: ConversationDb, userId: number, conv
 }
 
 export const ConversationService = {
-  list(userId: number) {
-    return getDb().conversation.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: Pick<ReturnType<typeof getDb>, 'conversation'>, userId: number, filters: ResourceFilters = {}) {
+    return db.conversation.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        ...pickFilters(filters, ['id', 'groupId', 'status']),
+        ...(filters.keyword ? { title: { contains: String(filters.keyword), mode: 'insensitive' } } : {}),
+        ...createdAtRange(filters),
+      },
       orderBy: { updatedAt: 'desc' },
     })
   },
@@ -106,10 +117,30 @@ export const ConversationService = {
     })
   },
 
-  listMessages(userId: number, conversationId: number) {
-    return getDb().conversationMessage.findMany({
-      where: { conversationId, userId, deletedAt: null },
+  listMessages(userId: number, conversationId: number, filters: ResourceFilters = {}) {
+    return this.listMessagesForUser(getDb(), userId, conversationId, filters)
+  },
+
+  listMessagesForUser(
+    db: Pick<ReturnType<typeof getDb>, 'conversationMessage'>,
+    userId: number,
+    conversationId: number,
+    filters: ResourceFilters = {},
+  ) {
+    const beforeId = filters.beforeId ? Number(filters.beforeId) : undefined
+    const afterId = filters.afterId ? Number(filters.afterId) : undefined
+    const pageSize = filters.pageSize ? Number(filters.pageSize) : undefined
+
+    return db.conversationMessage.findMany({
+      where: {
+        conversationId,
+        userId,
+        deletedAt: null,
+        ...(beforeId ? { id: { lt: beforeId } } : {}),
+        ...(afterId ? { id: { gt: afterId } } : {}),
+      },
       orderBy: { id: 'asc' },
+      ...(pageSize ? { take: pageSize } : {}),
     })
   },
 
@@ -134,11 +165,30 @@ export const ConversationService = {
     })
   },
 
-  async listSkills(userId: number, conversationId: number) {
-    await this.get(userId, conversationId)
+  async listSkills(userId: number, conversationId: number, filters: ResourceFilters = {}) {
+    return this.listSkillsForUser(getDb(), userId, conversationId, filters)
+  },
 
-    return getDb().conversationSkill.findMany({
-      where: { conversationId, deletedAt: null },
+  async listSkillsForUser(
+    db: Pick<ReturnType<typeof getDb>, 'conversation' | 'conversationSkill'>,
+    userId: number,
+    conversationId: number,
+    filters: ResourceFilters = {},
+  ) {
+    const conversation = await db.conversation.findFirst({
+      where: { id: conversationId, userId, deletedAt: null },
+    })
+
+    if (!conversation) {
+      throw new NotFoundException('conversation not found', 'CONVERSATION_NOT_FOUND')
+    }
+
+    return db.conversationSkill.findMany({
+      where: {
+        conversationId,
+        deletedAt: null,
+        ...pickFilters(filters, ['id', 'userSkillId', 'status']),
+      },
       orderBy: { sort: 'asc' },
     })
   },

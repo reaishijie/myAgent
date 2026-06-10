@@ -1,10 +1,20 @@
 import { getDb } from '../db'
 import { NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
 
 export const ConversationGroupService = {
-  list(userId: number) {
-    return getDb().conversationGroup.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: Pick<ReturnType<typeof getDb>, 'conversationGroup'>, userId: number, filters: ResourceFilters = {}) {
+    return db.conversationGroup.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        ...pickFilters(filters, ['id', 'type', 'status']),
+        ...createdAtRange(filters),
+      },
       orderBy: [{ sort: 'asc' }, { id: 'desc' }],
     })
   },

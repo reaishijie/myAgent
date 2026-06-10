@@ -1,13 +1,35 @@
 import { BillingStatus } from '@prisma/client'
 import { getDb } from '../db'
 import { NotFoundException } from '../core/exceptions'
+import { createdAtRange, pickFilters, type ResourceFilters } from './queryFilters'
 
 type InvocationDb = Pick<ReturnType<typeof getDb>, 'modelInvocation' | 'billingRecord'>
+type InvocationListDb = Pick<ReturnType<typeof getDb>, 'modelInvocation'>
+
+const modelInvocationFilterKeys = ['conversationId', 'modelId', 'channelId', 'capability', 'status']
+
+const buildModelInvocationWhere = (filters: ResourceFilters = {}, userId?: number) => ({
+  deletedAt: null,
+  ...pickFilters(filters, [...modelInvocationFilterKeys, ...(userId ? [] : ['userId']), 'id']),
+  ...(userId ? { userId } : {}),
+  ...createdAtRange(filters),
+})
 
 export const ModelInvocationService = {
-  list(userId: number) {
-    return getDb().modelInvocation.findMany({
-      where: { userId, deletedAt: null },
+  list(userId: number, filters: ResourceFilters = {}) {
+    return this.listForUser(getDb(), userId, filters)
+  },
+
+  listForUser(db: InvocationListDb, userId: number, filters: ResourceFilters = {}) {
+    return db.modelInvocation.findMany({
+      where: buildModelInvocationWhere(filters, userId),
+      orderBy: { id: 'desc' },
+    })
+  },
+
+  listForAdmin(db: InvocationListDb, filters: ResourceFilters = {}) {
+    return db.modelInvocation.findMany({
+      where: buildModelInvocationWhere(filters),
       orderBy: { id: 'desc' },
     })
   },
