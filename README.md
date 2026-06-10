@@ -402,3 +402,76 @@ Settings -> Secrets and variables -> Actions -> Repository secrets
 ```
 
 不要只配置到 Environment secrets，除非 workflow job 同时声明对应的 `environment`。
+
+## Phase 1 AI Configuration Foundation
+
+This phase adds the backend foundation for AI configuration. It does not call real
+AI providers, run generation queues, upload objects, or charge balances.
+
+Database additions:
+
+- Model configuration: `model_channels`, `models`, `model_channel_bindings`, `model_prices`
+- Skills and plugins: `skills`, `user_skills`, `user_default_skills`, `conversation_skills`, `plugins`
+- Runtime configuration: `configs`
+- Records and metadata: `generation_jobs`, `assets`, `model_invocations`, `billing_records`
+- Auth and chat basics: `user_sessions`, `conversation_groups`, `conversations`, `conversation_messages`
+
+Auth endpoints:
+
+```http
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET /api/auth/sessions
+POST /api/auth/sessions/revoke
+```
+
+Admin-only configuration endpoints require `Authorization: Bearer <accessToken>`
+for an admin user:
+
+```http
+GET    /api/admin/configs
+POST   /api/admin/configs
+PATCH  /api/admin/configs/:id
+DELETE /api/admin/configs/:id
+
+GET    /api/admin/model-channels
+GET    /api/admin/models
+GET    /api/admin/model-channel-bindings
+GET    /api/admin/model-prices
+GET    /api/admin/skills
+```
+
+User-owned endpoints require `Authorization: Bearer <accessToken>` and are scoped
+to the current user:
+
+```http
+GET/POST/PATCH/DELETE /api/user-skills
+GET/POST/PATCH/DELETE /api/user-default-skills
+GET/POST/PATCH/DELETE /api/conversation-groups
+GET/POST/PATCH/DELETE /api/conversations
+GET/POST/PATCH/DELETE /api/model-invocations
+GET/POST/PATCH/DELETE /api/generation-jobs
+GET/POST/PATCH/DELETE /api/assets
+GET                  /api/billing-records
+```
+
+Public config read:
+
+```http
+GET /api/configs
+GET /api/configs?group=site
+```
+
+Secrets and cache notes:
+
+- `SECRET_ENCRYPTION_KEY` is used to encrypt model channel API keys. Query APIs only return `apiKeyMasked`.
+- `JWT_SECRET` signs access tokens.
+- Redis is reserved behind `src/db/redis.ts`; key names use the `myagent:*` prefix. The default runtime client is no-op, so PostgreSQL remains the source of truth when Redis is unavailable.
+
+Verification:
+
+```bash
+bun test
+bun run db:generate
+```
