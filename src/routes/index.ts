@@ -1,12 +1,16 @@
 import { Hono } from 'hono'
 import { adminMiddleware, authMiddleware } from '../middleware/auth.middleware'
+import assetApp from './asset.route'
 import authApp from './auth.route'
+import billingRecordApp from './billingRecord.route'
 import { adminConfigApp, configApp } from './config.route'
 import conversationApp from './conversation.route'
 import conversationGroupApp from './conversationGroup.route'
+import generationJobApp from './generationJob.route'
 import modelApp from './model.route'
 import modelChannelApp from './modelChannel.route'
 import modelChannelBindingApp from './modelChannelBinding.route'
+import modelInvocationApp from './modelInvocation.route'
 import modelPriceApp from './modelPrice.route'
 import skillApp from './skill.route'
 import userDefaultSkillApp from './userDefaultSkill.route'
@@ -17,9 +21,13 @@ const apiRouter = new Hono()
 const adminRouter = new Hono()
 
 apiRouter.route('/auth', authApp)
+apiRouter.route('/assets', assetApp)
+apiRouter.route('/billing-records', billingRecordApp)
 apiRouter.route('/configs', configApp)
 apiRouter.route('/conversation-groups', conversationGroupApp)
 apiRouter.route('/conversations', conversationApp)
+apiRouter.route('/generation-jobs', generationJobApp)
+apiRouter.route('/model-invocations', modelInvocationApp)
 apiRouter.route('/users', userApp)
 apiRouter.route('/user-default-skills', userDefaultSkillApp)
 apiRouter.route('/user-skills', userSkillApp)
