@@ -23,25 +23,559 @@ enum UserStatus {
   DELETED
 }
 
+enum RecordStatus {
+  ENABLED
+  DISABLED
+}
+
+enum LifecycleStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum UserSessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum ModelCapability {
+  CHAT
+  TTS
+  IMAGE
+  VIDEO
+}
+
+enum ChannelProtocol {
+  OPENAI_COMPATIBLE
+  CUSTOM
+}
+
+enum PriceUnit {
+  ONE_K_TOKENS
+  ONE_M_TOKENS
+  REQUEST
+  SECOND
+}
+
+enum UserSkillSource {
+  SYSTEM
+  CUSTOM
+}
+
+enum PluginAuthType {
+  NONE
+  API_KEY
+  BEARER
+}
+
+enum ConfigAccessLevel {
+  PUBLIC
+  AUTHENTICATED
+  ADMIN
+}
+
+enum ConversationGroupType {
+  NORMAL
+  ARCHIVE
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+enum MessageContentType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  JSON
+}
+
+enum GenerationJobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELED
+}
+
+enum AssetType {
+  IMAGE
+  AUDIO
+  VIDEO
+  FILE
+}
+
+enum AssetStatus {
+  PENDING
+  READY
+  FAILED
+  DELETED
+}
+
+enum InvocationStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum BillingStatus {
+  PENDING
+  CHARGED
+  REFUNDED
+  FAILED
+}
+
 model User {
-  id          Int        @id @default(autoincrement())
-  avatar      String?    @db.VarChar(255)
-  username    String     @unique @db.VarChar(30)
-  nickname    String?    @db.VarChar(30)
-  password    String     @db.VarChar(255)
-  email       String?    @unique @db.VarChar(255)
-  phone       String?    @unique @db.VarChar(15)
-  status      UserStatus @default(NORMAL)
-  plan        UserPlan   @default(FREE)
-  balance     Decimal?   @default(0) @db.Decimal(12, 2)
-  planEndTime DateTime?  @map("plan_end_time") @db.Timestamp(6)
-  role        UserRole   @default(USER)
-  createdAt   DateTime?  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime?  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  profile     Json?
+  id                   Int                   @id @default(autoincrement())
+  avatar               String?               @db.VarChar(255)
+  username             String                @unique @db.VarChar(30)
+  nickname             String?               @db.VarChar(30)
+  password             String                @db.VarChar(255)
+  email                String?               @unique @db.VarChar(255)
+  phone                String?               @unique @db.VarChar(15)
+  status               UserStatus            @default(NORMAL)
+  plan                 UserPlan              @default(FREE)
+  balance              Decimal?              @default(0) @db.Decimal(12, 2)
+  planEndTime          DateTime?             @map("plan_end_time") @db.Timestamp(6)
+  role                 UserRole              @default(USER)
+  createdAt            DateTime?             @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt            DateTime?             @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  profile              Json?
+  sessions             UserSession[]
+  userSkills           UserSkill[]
+  userDefaultSkills    UserDefaultSkill[]
+  conversationGroups   ConversationGroup[]
+  conversations        Conversation[]
+  conversationMessages ConversationMessage[]
+  generationJobs       GenerationJob[]
+  assets               Asset[]
+  modelInvocations     ModelInvocation[]
+  billingRecords       BillingRecord[]
 
   @@index([status], map: "user_status_idx")
   @@index([createdAt], map: "user_created_idx")
   @@index([plan, planEndTime], map: "user_plan_time_idx")
   @@map("users")
+}
+
+model UserSession {
+  id               Int               @id @default(autoincrement())
+  userId           Int               @map("user_id")
+  refreshTokenHash String            @unique @map("refresh_token_hash") @db.VarChar(255)
+  deviceId         String?           @map("device_id") @db.VarChar(100)
+  deviceName       String?           @map("device_name") @db.VarChar(100)
+  userAgent        String?           @map("user_agent") @db.Text
+  ipAddress        String?           @map("ip_address") @db.VarChar(45)
+  status           UserSessionStatus @default(ACTIVE)
+  expiresAt        DateTime          @map("expires_at") @db.Timestamp(6)
+  revokedAt        DateTime?         @map("revoked_at") @db.Timestamp(6)
+  lastSeenAt       DateTime?         @map("last_seen_at") @db.Timestamp(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status], map: "user_sessions_user_status_idx")
+  @@index([deviceId], map: "user_sessions_device_idx")
+  @@index([expiresAt], map: "user_sessions_expires_idx")
+  @@map("user_sessions")
+}
+
+model ModelChannel {
+  id              Int                   @id @default(autoincrement())
+  name            String                @db.VarChar(100)
+  baseUrl         String                @map("base_url") @db.VarChar(500)
+  apiKeyEncrypted String                @map("api_key_encrypted") @db.Text
+  provider        String                @db.VarChar(50)
+  protocol        ChannelProtocol       @default(OPENAI_COMPATIBLE)
+  status          RecordStatus          @default(ENABLED)
+  remark          String?               @db.Text
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt       DateTime?             @map("deleted_at") @db.Timestamp(6)
+  bindings        ModelChannelBinding[]
+  prices          ModelPrice[]
+  invocations     ModelInvocation[]
+  billingRecords  BillingRecord[]
+
+  @@index([status], map: "model_channels_status_idx")
+  @@index([provider], map: "model_channels_provider_idx")
+  @@index([protocol], map: "model_channels_protocol_idx")
+  @@index([createdAt], map: "model_channels_created_idx")
+  @@map("model_channels")
+}
+
+model Model {
+  id             Int                   @id @default(autoincrement())
+  name           String                @db.VarChar(100)
+  description    String?               @db.Text
+  model          String                @db.VarChar(100)
+  capability     ModelCapability
+  tokens         BigInt                @default(0)
+  status         RecordStatus          @default(ENABLED)
+  remark         String?               @db.Text
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt      DateTime?             @map("deleted_at") @db.Timestamp(6)
+  bindings       ModelChannelBinding[]
+  prices         ModelPrice[]
+  conversations  Conversation[]
+  generationJobs GenerationJob[]
+  assets         Asset[]
+  invocations    ModelInvocation[]
+  billingRecords BillingRecord[]
+
+  @@index([capability], map: "models_capability_idx")
+  @@index([status], map: "models_status_idx")
+  @@index([createdAt], map: "models_created_idx")
+  @@map("models")
+}
+
+model ModelChannelBinding {
+  id        Int          @id @default(autoincrement())
+  modelId   Int          @map("model_id")
+  channelId Int          @map("channel_id")
+  priority  Int          @default(100)
+  status    RecordStatus @default(ENABLED)
+  remark    String?      @db.Text
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt DateTime?    @map("deleted_at") @db.Timestamp(6)
+  model     Model        @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  channel   ModelChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, channelId], map: "model_channel_bindings_model_channel_key")
+  @@index([modelId, status, priority], map: "model_channel_bindings_model_status_priority_idx")
+  @@index([channelId, status], map: "model_channel_bindings_channel_status_idx")
+  @@map("model_channel_bindings")
+}
+
+model ModelPrice {
+  id          Int             @id @default(autoincrement())
+  modelId     Int             @map("model_id")
+  channelId   Int?            @map("channel_id")
+  capability  ModelCapability
+  unit        PriceUnit
+  inputPrice  Decimal?        @map("input_price") @db.Decimal(18, 8)
+  outputPrice Decimal?        @map("output_price") @db.Decimal(18, 8)
+  price       Decimal?        @db.Decimal(18, 8)
+  currency    String          @default("USD") @db.VarChar(10)
+  effectiveAt DateTime        @default(now()) @map("effective_at") @db.Timestamp(6)
+  expiredAt   DateTime?       @map("expired_at") @db.Timestamp(6)
+  status      RecordStatus    @default(ENABLED)
+  remark      String?         @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamp(6)
+  model       Model           @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  channel     ModelChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  @@index([modelId, channelId, status], map: "model_prices_model_channel_status_idx")
+  @@index([capability], map: "model_prices_capability_idx")
+  @@index([effectiveAt], map: "model_prices_effective_idx")
+  @@map("model_prices")
+}
+
+model Skill {
+  id              Int              @id @default(autoincrement())
+  name            String           @db.VarChar(100)
+  description     String?          @db.Text
+  capability      ModelCapability?
+  inputSchema     Json?            @map("input_schema")
+  outputSchema    Json?            @map("output_schema")
+  allowedModelIds Json?            @map("allowed_model_ids")
+  status          RecordStatus     @default(ENABLED)
+  remark          String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamp(6)
+  userSkills      UserSkill[]
+
+  @@index([status], map: "skills_status_idx")
+  @@index([capability], map: "skills_capability_idx")
+  @@index([createdAt], map: "skills_created_idx")
+  @@map("skills")
+}
+
+model UserSkill {
+  id                 Int                 @id @default(autoincrement())
+  userId             Int                 @map("user_id")
+  skillId            Int?                @map("skill_id")
+  name               String              @db.VarChar(100)
+  description        String?             @db.Text
+  source             UserSkillSource     @default(CUSTOM)
+  config             Json?
+  status             RecordStatus        @default(ENABLED)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt          DateTime?           @map("deleted_at") @db.Timestamp(6)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill              Skill?              @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  defaultSkills      UserDefaultSkill[]
+  conversationSkills ConversationSkill[]
+
+  @@index([userId, status], map: "user_skills_user_status_idx")
+  @@index([skillId], map: "user_skills_skill_idx")
+  @@map("user_skills")
+}
+
+model UserDefaultSkill {
+  id          Int          @id @default(autoincrement())
+  userId      Int          @map("user_id")
+  userSkillId Int          @map("user_skill_id")
+  config      Json?
+  sort        Int          @default(100)
+  status      RecordStatus @default(ENABLED)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamp(6)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userSkill   UserSkill    @relation(fields: [userSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, userSkillId], map: "user_default_skills_user_skill_key")
+  @@index([userId, status, sort], map: "user_default_skills_user_status_sort_idx")
+  @@map("user_default_skills")
+}
+
+model ConversationSkill {
+  id             Int          @id @default(autoincrement())
+  conversationId Int          @map("conversation_id")
+  userSkillId    Int          @map("user_skill_id")
+  config         Json?
+  sort           Int          @default(100)
+  status         RecordStatus @default(ENABLED)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt      DateTime?    @map("deleted_at") @db.Timestamp(6)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userSkill      UserSkill    @relation(fields: [userSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userSkillId], map: "conversation_skills_conversation_user_skill_key")
+  @@index([conversationId, status, sort], map: "conversation_skills_conversation_status_sort_idx")
+  @@map("conversation_skills")
+}
+
+model Plugin {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(100)
+  description String?        @db.Text
+  endpoint    String?        @db.VarChar(500)
+  authType    PluginAuthType @default(NONE) @map("auth_type")
+  paramSchema Json?          @map("param_schema")
+  config      Json?
+  status      RecordStatus   @default(ENABLED)
+  remark      String?        @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamp(6)
+
+  @@index([status], map: "plugins_status_idx")
+  @@index([authType], map: "plugins_auth_type_idx")
+  @@map("plugins")
+}
+
+model Config {
+  id          Int               @id @default(autoincrement())
+  key         String            @unique @db.VarChar(100)
+  value       Json
+  group       String            @default("default") @db.VarChar(50)
+  accessLevel ConfigAccessLevel @default(ADMIN) @map("access_level")
+  status      RecordStatus      @default(ENABLED)
+  description String?           @db.Text
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime?         @map("deleted_at") @db.Timestamp(6)
+
+  @@index([group, status], map: "configs_group_status_idx")
+  @@index([accessLevel, status], map: "configs_access_status_idx")
+  @@map("configs")
+}
+
+model GenerationJob {
+  id           Int                 @id @default(autoincrement())
+  userId       Int                 @map("user_id")
+  modelId      Int?                @map("model_id")
+  capability   ModelCapability
+  status       GenerationJobStatus @default(PENDING)
+  request      Json?
+  result       Json?
+  errorMessage String?             @map("error_message") @db.Text
+  startedAt    DateTime?           @map("started_at") @db.Timestamp(6)
+  finishedAt   DateTime?           @map("finished_at") @db.Timestamp(6)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt    DateTime?           @map("deleted_at") @db.Timestamp(6)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model        Model?              @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  assets       Asset[]
+
+  @@index([userId, status], map: "generation_jobs_user_status_idx")
+  @@index([capability, status], map: "generation_jobs_capability_status_idx")
+  @@index([createdAt], map: "generation_jobs_created_idx")
+  @@map("generation_jobs")
+}
+
+model Asset {
+  id                Int              @id @default(autoincrement())
+  userId            Int              @map("user_id")
+  generationJobId   Int?             @map("generation_job_id")
+  conversationId    Int?             @map("conversation_id")
+  modelInvocationId Int?             @map("model_invocation_id")
+  modelId           Int?             @map("model_id")
+  type              AssetType
+  status            AssetStatus      @default(PENDING)
+  storageProvider   String?          @map("storage_provider") @db.VarChar(50)
+  bucket            String?          @db.VarChar(100)
+  objectKey         String?          @map("object_key") @db.VarChar(500)
+  url               String?          @db.VarChar(1000)
+  mimeType          String?          @map("mime_type") @db.VarChar(100)
+  size              BigInt?
+  metadata          Json?
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamp(6)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generationJob     GenerationJob?   @relation(fields: [generationJobId], references: [id], onDelete: SetNull)
+  conversation      Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  modelInvocation   ModelInvocation? @relation(fields: [modelInvocationId], references: [id], onDelete: SetNull)
+  model             Model?           @relation(fields: [modelId], references: [id], onDelete: SetNull)
+
+  @@index([userId, type, status], map: "assets_user_type_status_idx")
+  @@index([generationJobId], map: "assets_generation_job_idx")
+  @@index([conversationId], map: "assets_conversation_idx")
+  @@index([modelInvocationId], map: "assets_model_invocation_idx")
+  @@index([createdAt], map: "assets_created_idx")
+  @@map("assets")
+}
+
+model ModelInvocation {
+  id               Int              @id @default(autoincrement())
+  userId           Int              @map("user_id")
+  conversationId   Int?             @map("conversation_id")
+  modelId          Int?             @map("model_id")
+  channelId        Int?             @map("channel_id")
+  capability       ModelCapability
+  request          Json?
+  response         Json?
+  promptTokens     Int              @default(0) @map("prompt_tokens")
+  completionTokens Int              @default(0) @map("completion_tokens")
+  totalTokens      Int              @default(0) @map("total_tokens")
+  status           InvocationStatus @default(PENDING)
+  errorCode        String?          @map("error_code") @db.VarChar(100)
+  errorMessage     String?          @map("error_message") @db.Text
+  cost             Decimal?         @db.Decimal(18, 8)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamp(6)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation     Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  model            Model?           @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  channel          ModelChannel?    @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  assets           Asset[]
+  billingRecords   BillingRecord[]
+
+  @@index([userId, status], map: "model_invocations_user_status_idx")
+  @@index([conversationId], map: "model_invocations_conversation_idx")
+  @@index([modelId], map: "model_invocations_model_idx")
+  @@index([channelId], map: "model_invocations_channel_idx")
+  @@index([capability, status], map: "model_invocations_capability_status_idx")
+  @@index([createdAt], map: "model_invocations_created_idx")
+  @@map("model_invocations")
+}
+
+model BillingRecord {
+  id                Int              @id @default(autoincrement())
+  userId            Int              @map("user_id")
+  modelInvocationId Int?             @map("model_invocation_id")
+  modelId           Int?             @map("model_id")
+  channelId         Int?             @map("channel_id")
+  capability        ModelCapability
+  amount            Decimal          @default(0) @db.Decimal(18, 8)
+  currency          String           @default("USD") @db.VarChar(10)
+  status            BillingStatus    @default(PENDING)
+  detail            Json?
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamp(6)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelInvocation   ModelInvocation? @relation(fields: [modelInvocationId], references: [id], onDelete: SetNull)
+  model             Model?           @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  channel           ModelChannel?    @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status], map: "billing_records_user_status_idx")
+  @@index([modelInvocationId], map: "billing_records_model_invocation_idx")
+  @@index([modelId], map: "billing_records_model_idx")
+  @@index([channelId], map: "billing_records_channel_idx")
+  @@index([capability, status], map: "billing_records_capability_status_idx")
+  @@index([createdAt], map: "billing_records_created_idx")
+  @@map("billing_records")
+}
+
+model ConversationGroup {
+  id            Int                   @id @default(autoincrement())
+  userId        Int                   @map("user_id")
+  name          String                @db.VarChar(100)
+  type          ConversationGroupType @default(NORMAL)
+  sort          Int                   @default(100)
+  status        RecordStatus          @default(ENABLED)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt     DateTime?             @map("deleted_at") @db.Timestamp(6)
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([userId, type, status], map: "conversation_groups_user_type_status_idx")
+  @@index([userId, sort], map: "conversation_groups_user_sort_idx")
+  @@map("conversation_groups")
+}
+
+model Conversation {
+  id                 Int                   @id @default(autoincrement())
+  userId             Int                   @map("user_id")
+  groupId            Int?                  @map("group_id")
+  defaultModelId     Int?                  @map("default_model_id")
+  title              String                @db.VarChar(200)
+  status             LifecycleStatus       @default(ACTIVE)
+  metadata           Json?
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt          DateTime?             @map("deleted_at") @db.Timestamp(6)
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group              ConversationGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  defaultModel       Model?                @relation(fields: [defaultModelId], references: [id], onDelete: SetNull)
+  messages           ConversationMessage[]
+  conversationSkills ConversationSkill[]
+  modelInvocations   ModelInvocation[]
+  assets             Asset[]
+
+  @@index([userId, status], map: "conversations_user_status_idx")
+  @@index([groupId], map: "conversations_group_idx")
+  @@index([defaultModelId], map: "conversations_default_model_idx")
+  @@index([createdAt], map: "conversations_created_idx")
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id                Int                @id @default(autoincrement())
+  conversationId    Int                @map("conversation_id")
+  userId            Int                @map("user_id")
+  role              MessageRole
+  contentType       MessageContentType @default(TEXT) @map("content_type")
+  content           Json
+  modelInvocationId Int?               @map("model_invocation_id")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt         DateTime?          @map("deleted_at") @db.Timestamp(6)
+  conversation      Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, id], map: "conversation_messages_conversation_id_idx")
+  @@index([conversationId, createdAt], map: "conversation_messages_conversation_created_idx")
+  @@index([userId], map: "conversation_messages_user_idx")
+  @@map("conversation_messages")
 }
