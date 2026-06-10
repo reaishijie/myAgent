@@ -156,13 +156,36 @@ export const ConversationService = {
     return this.createMessage(getDb(), userId, conversationId, data)
   },
 
-  async deleteMessage(userId: number, conversationId: number, messageId: number) {
-    await this.get(userId, conversationId)
+  async deleteMessageWithDb(
+    db: Pick<ConversationDb, 'conversation' | 'conversationMessage'>,
+    userId: number,
+    conversationId: number,
+    messageId: number,
+  ) {
+    const conversation = await db.conversation.findFirst({
+      where: { id: conversationId, userId, deletedAt: null },
+    })
 
-    return getDb().conversationMessage.update({
+    if (!conversation) {
+      throw new NotFoundException('conversation not found', 'CONVERSATION_NOT_FOUND')
+    }
+
+    const message = await db.conversationMessage.findFirst({
+      where: { id: messageId, conversationId, userId, deletedAt: null },
+    })
+
+    if (!message) {
+      throw new NotFoundException('message not found', 'CONVERSATION_MESSAGE_NOT_FOUND')
+    }
+
+    return db.conversationMessage.update({
       where: { id: messageId },
       data: { deletedAt: new Date() },
     })
+  },
+
+  async deleteMessage(userId: number, conversationId: number, messageId: number) {
+    return this.deleteMessageWithDb(getDb(), userId, conversationId, messageId)
   },
 
   async listSkills(userId: number, conversationId: number, filters: ResourceFilters = {}) {
@@ -201,18 +224,53 @@ export const ConversationService = {
     })
   },
 
-  async updateSkill(userId: number, conversationId: number, id: number, data: Record<string, unknown>) {
-    await ensureActiveConversation(getDb(), userId, conversationId)
+  async updateSkillWithDb(
+    db: Pick<ConversationDb, 'conversation' | 'conversationSkill'>,
+    userId: number,
+    conversationId: number,
+    id: number,
+    data: Record<string, unknown>,
+  ) {
+    await ensureActiveConversation(db as ConversationDb, userId, conversationId)
 
-    return getDb().conversationSkill.update({ where: { id }, data })
+    const conversationSkill = await db.conversationSkill.findFirst({
+      where: { id, conversationId, deletedAt: null },
+    })
+
+    if (!conversationSkill) {
+      throw new NotFoundException('conversation skill not found', 'CONVERSATION_SKILL_NOT_FOUND')
+    }
+
+    return db.conversationSkill.update({ where: { id }, data })
   },
 
-  async deleteSkill(userId: number, conversationId: number, id: number) {
-    await ensureActiveConversation(getDb(), userId, conversationId)
+  async updateSkill(userId: number, conversationId: number, id: number, data: Record<string, unknown>) {
+    return this.updateSkillWithDb(getDb(), userId, conversationId, id, data)
+  },
 
-    return getDb().conversationSkill.update({
+  async deleteSkillWithDb(
+    db: Pick<ConversationDb, 'conversation' | 'conversationSkill'>,
+    userId: number,
+    conversationId: number,
+    id: number,
+  ) {
+    await ensureActiveConversation(db as ConversationDb, userId, conversationId)
+
+    const conversationSkill = await db.conversationSkill.findFirst({
+      where: { id, conversationId, deletedAt: null },
+    })
+
+    if (!conversationSkill) {
+      throw new NotFoundException('conversation skill not found', 'CONVERSATION_SKILL_NOT_FOUND')
+    }
+
+    return db.conversationSkill.update({
       where: { id },
       data: { deletedAt: new Date() },
     })
+  },
+
+  async deleteSkill(userId: number, conversationId: number, id: number) {
+    return this.deleteSkillWithDb(getDb(), userId, conversationId, id)
   },
 }

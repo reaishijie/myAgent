@@ -15,7 +15,8 @@ const numberKeys = new Set([
 
 const normalizeValue = (key: string, value: unknown) => {
   if (numberKeys.has(key)) {
-    return typeof value === 'number' ? value : Number(value)
+    const numberValue = typeof value === 'number' ? value : Number(value)
+    return Number.isFinite(numberValue) ? numberValue : undefined
   }
 
   return value
@@ -27,7 +28,10 @@ export const pickFilters = (filters: ResourceFilters = {}, keys: string[]) => {
   for (const key of keys) {
     const value = filters[key]
     if (isPresent(value)) {
-      where[key] = normalizeValue(key, value)
+      const normalized = normalizeValue(key, value)
+      if (isPresent(normalized)) {
+        where[key] = normalized
+      }
     }
   }
 

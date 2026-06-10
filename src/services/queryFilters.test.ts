@@ -4,6 +4,7 @@ import { ConversationService } from './conversation.service'
 import { createFilteredCrudService } from './filteredCrud.service'
 import { GenerationJobService } from './generationJob.service'
 import { ModelInvocationService } from './modelInvocation.service'
+import { pickFilters } from './queryFilters'
 import { UserSkillService } from './userSkill.service'
 
 const createDelegate = () => {
@@ -24,6 +25,12 @@ const createDelegate = () => {
 }
 
 describe('query filters', () => {
+  test('pickFilters ignores invalid numeric query values', () => {
+    expect(pickFilters({ userId: 'abc', modelId: '2' }, ['userId', 'modelId'])).toEqual({
+      modelId: 2,
+    })
+  })
+
   test('asset list applies owner and metadata filters', async () => {
     const { calls, delegate } = createDelegate()
     const db = { asset: delegate }

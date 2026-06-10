@@ -52,4 +52,46 @@ describe('ConversationService', () => {
       }),
     ).rejects.toThrow('Archived conversations cannot be modified')
   })
+
+  test('deleteMessage rejects messages outside the target conversation', async () => {
+    const updates: any[] = []
+    const db = {
+      conversation: {
+        findFirst: async () => ({ id: 10, userId: 1, status: 'ACTIVE' }),
+      },
+      conversationMessage: {
+        findFirst: async () => null,
+        update: async (args: any) => {
+          updates.push(args)
+          return { id: args.where.id }
+        },
+      },
+    }
+
+    await expect(ConversationService.deleteMessageWithDb(db as any, 1, 10, 99)).rejects.toThrow('message not found')
+    expect(updates).toEqual([])
+  })
+
+  test('updateSkill rejects conversation skills outside the target conversation', async () => {
+    const updates: any[] = []
+    const db = {
+      conversation: {
+        findFirst: async () => ({ id: 10, userId: 1, status: 'ACTIVE' }),
+      },
+      conversationSkill: {
+        findFirst: async () => null,
+        update: async (args: any) => {
+          updates.push(args)
+          return { id: args.where.id }
+        },
+      },
+      conversationMessage: {},
+      userDefaultSkill: {},
+    }
+
+    await expect(
+      ConversationService.updateSkillWithDb(db as any, 1, 10, 88, { status: 'DISABLED' }),
+    ).rejects.toThrow('conversation skill not found')
+    expect(updates).toEqual([])
+  })
 })
