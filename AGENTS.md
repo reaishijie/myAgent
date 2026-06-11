@@ -28,6 +28,10 @@ Tests use Bun's built-in `bun:test` APIs. Place tests beside the code they cover
 
 Recent history uses short imperative summaries, sometimes in English and sometimes Chinese, for example `use prisma replace drizzle` and `兼容部署到Cloudflare的Workers`. Keep commits concise, action-oriented, and scoped to one change. Pull requests should describe the change, list verification commands, note database or deployment impacts, and link related issues. Include API examples or screenshots only when visible behavior changes.
 
+Development work should branch from `develop`. Use one branch per feature or fix, with descriptive names such as `feat/auth-sessions`, `feat/model-config`, or `fix/token-refresh`. Merge completed work back into `develop`.
+
+Agents may create local branches and local commits when asked to implement work, but must not push to GitHub, open pull requests, or otherwise publish changes remotely unless the user explicitly asks for that action in the current task.
+
 ## Security & Configuration Tips
 
 Do not commit `.env`, database URLs, cloud credentials, generated `dist/`, `node_modules/`, `.wrangler/`, or `bun-layer.zip`. Keep `DATABASE_URL`, `BUN_LAYER_ARN`, and provider credentials in the shell or deployment platform. Run Prisma migrations before deploying runtime code that depends on schema changes.

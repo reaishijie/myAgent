@@ -467,7 +467,8 @@ Secrets and cache notes:
 
 - `SECRET_ENCRYPTION_KEY` is used to encrypt model channel API keys. Query APIs only return `apiKeyMasked`.
 - `JWT_SECRET` signs access tokens.
-- Redis is reserved behind `src/db/redis.ts`; key names use the `myagent:*` prefix. The default runtime client is no-op, so PostgreSQL remains the source of truth when Redis is unavailable.
+- Redis is reserved behind `src/db/redis.ts`; key names use the `myagent:*` prefix. The default runtime client is no-op, so Redis is not used for caching yet.
+- Session, refresh token, config, invocation, and billing state are still stored in PostgreSQL. Future Redis usage should be cache/blacklist/rate-limit only and must fall back to PostgreSQL when Redis is unavailable.
 
 Verification:
 
