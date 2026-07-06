@@ -65,7 +65,7 @@ model KnowledgeChunk {
   documentId     Int               @map("document_id")
   chunkIndex     Int               @map("chunk_index")
   content        String
-  embedding      Unsupported("vector")
+  embedding      Unsupported("vector(1536)")
   embeddingModel String            @map("embedding_model") @db.VarChar(120)
   tokenCount     Int?              @map("token_count")
   createdAt      DateTime?         @default(now()) @map("created_at") @db.Timestamp(6)

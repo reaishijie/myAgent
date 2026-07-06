@@ -4,20 +4,42 @@ import { z } from 'zod'
 import { ApiResponse } from '../core/response'
 import { RagService } from '../services/rag.service'
 
+const documentTitleSchema = z.string().trim().min(1, '标题不能为空').max(120, '标题太长啦')
+
 const createDocumentSchema = z.object({
-  title: z.string().trim().min(1, '标题不能为空').max(120, '标题太长啦'),
+  title: documentTitleSchema,
   content: z.string().trim().min(1, '文档内容不能为空'),
 })
 
+const createPlainDocumentQuerySchema = z.object({
+  title: documentTitleSchema,
+})
+
+const parseTopK = () => {
+  const value = process.env.RAG_TOP_K
+  const parsed = value ? Number(value) : 5
+
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 10 ? parsed : 5
+}
+
 const querySchema = z.object({
   question: z.string().trim().min(1, '问题不能为空'),
-  topK: z.number().int().min(1).max(10).default(5),
+  topK: z.number().int().min(1).max(10).default(parseTopK()),
 })
 
 const ragApp = new Hono()
 
 ragApp.post('/documents', zValidator('json', createDocumentSchema), async (c) => {
   const data = c.req.valid('json')
+  const result = await RagService.createDocument(data)
+
+  return c.json(ApiResponse.success(result, '文档入库成功', 201), 201)
+})
+
+ragApp.post('/documents/plain', zValidator('query', createPlainDocumentQuerySchema), async (c) => {
+  const { title } = c.req.valid('query')
+  const content = await c.req.text()
+  const data = createDocumentSchema.parse({ title, content })
   const result = await RagService.createDocument(data)
 
   return c.json(ApiResponse.success(result, '文档入库成功', 201), 201)
