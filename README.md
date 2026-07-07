@@ -6,11 +6,18 @@
 
 - 用户注册接口
 - 用户查询接口
-- Prisma Schema 管理
-- 最小 RAG 文档入库与问答接口
+- Prisma Schema 管理与迁移
+- 知识库、文档、分片、Widget/Bot、会话和消息数据模型
+- 管理端 API Key 保护的知识库、文档上传和 Widget 配置接口
+- txt、md、PDF、docx 基础文本解析、入库、embedding 和混合检索
+- 基于知识库隔离的普通/流式 RAG 问答，返回 sources 供调试
+- React 管理控制台：创建知识库、上传文件或粘贴文本/Markdown 入库、按分类筛选/分页展示文档、配置 Widget、复制嵌入代码、测试问答
+- 外站一行 `<script>` 接入的 iframe 聊天窗口，支持公开跨域配置、流式聊天和消息持久化
 - 阿里云函数计算 FC 部署配置
 - Cloudflare Workers 部署配置
 - GitHub Actions 手动选择部署目标
+
+> MVP 边界：当前版本不包含组织多租户、计费、完整用户权限、OCR/扫描件识别、复杂主题系统或域名白名单强制校验。
 
 ## 环境要求
 
@@ -37,7 +44,7 @@ cp .env.example .env
 
 ```env
 PORT='9889'
-DATABASE_URL='postgres://postgres:root123456@127.0.0.1:5432/hono'
+DATABASE_URL='postgres://postgres:root123456@127.0.0.1:5432/agent-rag'
 OPENAI_CHAT_API_KEY=''
 OPENAI_CHAT_BASE_URL='https://api.openai.com/v1'
 OPENAI_CHAT_MODEL=''
@@ -46,7 +53,11 @@ OPENAI_EMBEDDING_BASE_URL='https://api.openai.com/v1'
 OPENAI_EMBEDDING_MODEL='text-embedding-3-small'
 RAG_CHUNK_SIZE='800'
 RAG_CHUNK_OVERLAP='120'
+RAG_TOP_K='5'
+ADMIN_API_KEY='change-me-in-local-dev'
 ```
+
+`ADMIN_API_KEY` 用于保护管理端接口。管理请求可通过 `x-admin-api-key: <key>` 或 `Authorization: Bearer <key>` 访问；公开 Widget 配置和聊天接口不需要该口令。
 
 生成 Prisma Client：
 
@@ -65,6 +76,16 @@ bun run db:push
 ```bash
 bun run dev
 ```
+
+启动 React 管理控制台：
+
+```bash
+cd frontend
+bun install
+bun run dev
+```
+
+控制台中填写后端 API Base URL（例如 `http://localhost:9889/api`）和 `ADMIN_API_KEY`，即可创建知识库、上传 `txt/md/pdf/docx`、配置 Widget 并复制接入脚本。
 
 默认访问地址：
 
@@ -166,26 +187,54 @@ Content-Type: application/json
 GET /api/users/:username
 ```
 
-RAG 入库：
+管理端创建知识库（需要后台口令）：
 
 ```http
-POST /api/rag/documents
+POST /api/admin/knowledge-bases
+x-admin-api-key: <ADMIN_API_KEY>
 Content-Type: application/json
 ```
 
-RAG 问答：
+上传文档到知识库（需要后台口令，支持文件 `txt/md/pdf/docx` 或直接提交文本/Markdown，可选 `category` 分类字段）：
 
 ```http
-POST /api/rag/query
-Content-Type: application/json
+POST /api/rag/documents/upload
+x-admin-api-key: <ADMIN_API_KEY>
+Content-Type: multipart/form-data
 ```
 
-RAG 流式问答：
+管理端按知识库测试流式问答（需要后台口令，可选 `category` 只检索指定分类）：
 
 ```http
 POST /api/rag/query/stream
+x-admin-api-key: <ADMIN_API_KEY>
 Content-Type: application/json
 Accept: text/event-stream
+```
+
+公开读取 Widget 配置：
+
+```http
+GET /api/widgets/:widgetId/config
+```
+
+公开 Widget 聊天：
+
+```http
+POST /api/chat/sessions
+POST /api/chat/sessions/:sessionId/messages/stream
+```
+
+外站一行脚本接入示例：
+
+```html
+<script src="https://your-console-origin/widget.js" data-widget-id="YOUR_WIDGET_ID" defer></script>
+```
+
+默认情况下，Widget iframe 会请求前端同源的 `/api`，适合通过前端服务或网关代理到后端。只有跨域部署且没有同源代理时，才需要显式覆盖 API 地址：
+
+```html
+<script src="https://your-console-origin/widget.js" data-widget-id="YOUR_WIDGET_ID" data-api-base-url="https://your-api-origin/api" defer></script>
 ```
 
 ## 项目结构

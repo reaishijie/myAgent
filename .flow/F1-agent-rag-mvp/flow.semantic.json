@@ -1,0 +1,64 @@
+{
+  "title": "打通个人和公司通用智能体 MVP",
+  "goals": [
+    {
+      "title": "建立知识库、机器人和会话的后端基础",
+      "role": "normal",
+      "file": "G1-goal.md",
+      "dependsOn": [],
+      "writeScope": [
+        "prisma/**",
+        "src/routes/**",
+        "src/services/**",
+        "src/middleware/**",
+        "src/core/**",
+        "src/db/**",
+        "src/utils/**"
+      ]
+    },
+    {
+      "title": "让文档上传后完成解析、入库和混合检索",
+      "role": "normal",
+      "file": "G2-goal.md",
+      "dependsOn": [0],
+      "writeScope": [
+        "prisma/**",
+        "src/routes/**",
+        "src/services/**",
+        "src/utils/**"
+      ]
+    },
+    {
+      "title": "提供可管理知识库和机器人的 React 控制台",
+      "role": "normal",
+      "file": "G3-goal.md",
+      "dependsOn": [0, 1],
+      "writeScope": [
+        "frontend/src/**",
+        "frontend/package.json",
+        "frontend/vite.config.ts"
+      ]
+    },
+    {
+      "title": "提供一行代码即可接入的外站聊天窗口",
+      "role": "normal",
+      "file": "G4-goal.md",
+      "dependsOn": [0, 1],
+      "writeScope": [
+        "frontend/src/**",
+        "frontend/public/**",
+        "frontend/package.json",
+        "frontend/vite.config.ts",
+        "src/routes/**",
+        "src/services/**",
+        "src/middleware/**"
+      ]
+    },
+    {
+      "title": "最终验收端到端智能体系统",
+      "role": "final_acceptance",
+      "file": "G5-final-acceptance.md",
+      "dependsOn": [0, 1, 2, 3]
+    }
+  ]
+}
