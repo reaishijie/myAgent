@@ -351,12 +351,12 @@ function ConsoleApp() {
   const handleSaveConfig = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nextConfig = {
-      apiBaseUrl: configDraft.apiBaseUrl.trim() || defaultApiBaseUrl,
       adminApiKey: configDraft.adminApiKey.trim(),
     }
     knowledgeLoadRequestId.current += 1
     saveConsoleConfig(nextConfig)
     setConfig(nextConfig)
+    setConfigDraft(nextConfig)
     setNotice({ type: 'success', message: '后台口令已保存到当前浏览器' })
   }
 
@@ -638,14 +638,6 @@ function ConsoleApp() {
       </div>
       <form className="form-grid settings-form" onSubmit={handleSaveConfig}>
         <label>
-          <span>API Base URL</span>
-          <input
-            value={configDraft.apiBaseUrl}
-            onChange={(event) => setConfigDraft((current) => ({ ...current, apiBaseUrl: event.target.value }))}
-            placeholder="/api"
-          />
-        </label>
-        <label>
           <span>后台口令 / API Key</span>
           <input
             value={configDraft.adminApiKey}
@@ -654,6 +646,7 @@ function ConsoleApp() {
             type="password"
           />
         </label>
+        <p className="muted">API 地址由前端部署环境变量 VITE_API_BASE_URL 固定配置。</p>
         <button className="primary-button" type="submit">保存配置</button>
       </form>
     </section>

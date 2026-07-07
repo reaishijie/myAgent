@@ -34,6 +34,11 @@ export const assertAdminApiKey = (headers: Headers) => {
 
 export const requireAdminApiKey = (): MiddlewareHandler => {
   return async (c, next) => {
+    if (c.req.method === 'OPTIONS') {
+      await next()
+      return
+    }
+
     assertAdminApiKey(c.req.raw.headers)
     await next()
   }

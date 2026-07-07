@@ -9,7 +9,6 @@ export interface ApiEnvelope<T> {
 }
 
 export interface ConsoleConfig {
-  apiBaseUrl: string
   adminApiKey: string
 }
 
@@ -123,22 +122,20 @@ export const loadConsoleConfig = (): ConsoleConfig => {
   try {
     const raw = localStorage.getItem(configStorageKey)
     if (!raw) {
-      return { apiBaseUrl: defaultApiBaseUrl, adminApiKey: '' }
+      return { adminApiKey: '' }
     }
 
     const parsed = JSON.parse(raw) as Partial<ConsoleConfig>
     return {
-      apiBaseUrl: parsed.apiBaseUrl?.trim() || defaultApiBaseUrl,
       adminApiKey: parsed.adminApiKey ?? '',
     }
   } catch {
-    return { apiBaseUrl: defaultApiBaseUrl, adminApiKey: '' }
+    return { adminApiKey: '' }
   }
 }
 
 export const saveConsoleConfig = (config: ConsoleConfig) => {
   localStorage.setItem(configStorageKey, JSON.stringify({
-    apiBaseUrl: config.apiBaseUrl.trim() || defaultApiBaseUrl,
     adminApiKey: config.adminApiKey,
   }))
 }
@@ -242,7 +239,7 @@ const readSseStream = async <T>(response: Response, onEvent: (event: T) => void)
 
 export const createApiClient = (config: ConsoleConfig) => {
   const requestJson = async <T>(path: string, init: RequestInit = {}) => {
-    const response = await fetch(buildUrl(config.apiBaseUrl, path), {
+    const response = await fetch(buildUrl(defaultApiBaseUrl, path), {
       ...init,
       headers: {
         'content-type': 'application/json',
@@ -295,7 +292,7 @@ export const createApiClient = (config: ConsoleConfig) => {
         form.append('category', payload.category.trim())
       }
 
-      const response = await fetch(buildUrl(config.apiBaseUrl, '/rag/documents/upload'), {
+      const response = await fetch(buildUrl(defaultApiBaseUrl, '/rag/documents/upload'), {
         method: 'POST',
         headers: adminHeaders(config.adminApiKey),
         body: form,
@@ -317,7 +314,7 @@ export const createApiClient = (config: ConsoleConfig) => {
     }),
 
     streamQuestion: async (payload: { question: string; topK: number; knowledgeBaseId?: number; widgetId?: string; category?: string }, onEvent: (event: StreamEvent) => void) => {
-      const response = await fetch(buildUrl(config.apiBaseUrl, '/rag/query/stream'), {
+      const response = await fetch(buildUrl(defaultApiBaseUrl, '/rag/query/stream'), {
         method: 'POST',
         headers: payload.widgetId
           ? { 'content-type': 'application/json' }

@@ -85,7 +85,7 @@ bun install
 bun run dev
 ```
 
-控制台中填写后端 API Base URL（例如 `http://localhost:9889/api`）和 `ADMIN_API_KEY`，即可创建知识库、上传 `txt/md/pdf/docx`、配置 Widget 并复制接入脚本。
+控制台通过前端环境变量 `VITE_API_BASE_URL` 固定后端地址；页面中填写 `ADMIN_API_KEY` 后，即可创建知识库、上传 `txt/md/pdf/docx`、配置 Widget 并复制接入脚本。
 
 默认访问地址：
 

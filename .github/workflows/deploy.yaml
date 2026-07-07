@@ -29,6 +29,16 @@ jobs:
       DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'fc' }}
       BUN_LAYER_ARN: ${{ secrets.BUN_LAYER_ARN }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      OPENAI_CHAT_API_KEY: ${{ secrets.OPENAI_CHAT_API_KEY }}
+      OPENAI_CHAT_BASE_URL: ${{ secrets.OPENAI_CHAT_BASE_URL }}
+      OPENAI_CHAT_MODEL: ${{ secrets.OPENAI_CHAT_MODEL }}
+      OPENAI_EMBEDDING_API_KEY: ${{ secrets.OPENAI_EMBEDDING_API_KEY }}
+      OPENAI_EMBEDDING_BASE_URL: ${{ secrets.OPENAI_EMBEDDING_BASE_URL }}
+      OPENAI_EMBEDDING_MODEL: ${{ secrets.OPENAI_EMBEDDING_MODEL }}
+      RAG_CHUNK_SIZE: ${{ secrets.RAG_CHUNK_SIZE }}
+      RAG_CHUNK_OVERLAP: ${{ secrets.RAG_CHUNK_OVERLAP }}
+      RAG_TOP_K: ${{ secrets.RAG_TOP_K }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
@@ -74,7 +84,29 @@ jobs:
 
       - name: Configure Cloudflare runtime secrets
         if: env.DEPLOY_TARGET == 'cloudflare'
-        run: printf "%s" "$DATABASE_URL" | bunx wrangler secret put DATABASE_URL
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local name="$1"
+            local value="${!name:-}"
+            if [ -n "$value" ]; then
+              printf "%s" "$value" | bunx wrangler secret put "$name"
+            else
+              echo "Skip empty Cloudflare secret: $name"
+            fi
+          }
+
+          put_secret DATABASE_URL
+          put_secret ADMIN_API_KEY
+          put_secret OPENAI_CHAT_API_KEY
+          put_secret OPENAI_CHAT_BASE_URL
+          put_secret OPENAI_CHAT_MODEL
+          put_secret OPENAI_EMBEDDING_API_KEY
+          put_secret OPENAI_EMBEDDING_BASE_URL
+          put_secret OPENAI_EMBEDDING_MODEL
+          put_secret RAG_CHUNK_SIZE
+          put_secret RAG_CHUNK_OVERLAP
+          put_secret RAG_TOP_K
 
       - name: Deploy to Cloudflare Workers
         if: env.DEPLOY_TARGET == 'cloudflare'
