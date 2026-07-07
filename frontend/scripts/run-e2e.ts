@@ -56,9 +56,13 @@ const backendEnv = {
   OPENAI_EMBEDDING_MODEL: 'mock-embedding',
 }
 
+const frontendEnv = {
+  ...baseEnv,
+  VITE_API_BASE_URL: `${backendBaseUrl}/api`,
+}
+
 const playwrightEnv = {
   ...baseEnv,
-  E2E_API_BASE_URL: `${backendBaseUrl}/api`,
   E2E_FRONTEND_URL: frontendBaseUrl,
 }
 
@@ -110,7 +114,7 @@ const services = [
   run('backend', ['bun', 'src/index.ts'], { cwd: rootDir, env: backendEnv }),
   run('frontend', ['bun', './node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'], {
     cwd: frontendDir,
-    env: baseEnv,
+    env: frontendEnv,
   }),
 ]
 

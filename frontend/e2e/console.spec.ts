@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test'
 
 const adminKey = 'playwright-admin-key'
-const apiBaseUrl = process.env.E2E_API_BASE_URL || 'http://127.0.0.1:9898/api'
 test('browser completes knowledge base, upload, widget embed, and QA flow against real backend', async ({ page, context }) => {
   const uniqueName = `E2E KB ${Date.now()}-${crypto.randomUUID()}`
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
@@ -9,7 +8,7 @@ test('browser completes knowledge base, upload, widget embed, and QA flow agains
   await page.goto('/')
   await page.getByRole('button', { name: '导航 连接' }).click()
 
-  await page.getByLabel('API Base URL').fill(apiBaseUrl)
+  await expect(page.getByLabel('API Base URL')).toHaveCount(0)
   await page.getByLabel('后台口令 / API Key').fill(adminKey)
   await page.getByRole('button', { name: '保存配置' }).click()
   await expect(page.getByText('Admin key configured')).toBeVisible()

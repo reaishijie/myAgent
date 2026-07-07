@@ -113,9 +113,7 @@ test('console completes knowledge base, upload, widget embed, and streamed QA fl
   const view = render(<App />)
 
   await user.click(view.getByRole('button', { name: '导航 连接' }))
-  const apiBaseUrl = view.getByLabelText('API Base URL')
-  await user.clear(apiBaseUrl)
-  await user.type(apiBaseUrl, '/api')
+  expect(view.queryByLabelText('API Base URL')).toBeNull()
   await user.type(view.getByLabelText('后台口令 / API Key'), 'test-admin-key')
   await user.click(view.getByRole('button', { name: '保存配置' }))
   await user.click(view.getByRole('button', { name: '导航 知识库' }))

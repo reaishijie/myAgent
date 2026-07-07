@@ -4,7 +4,7 @@ React + Vite 管理控制台和外站 Widget 静态资源。
 
 ## 功能
 
-- 管理控制台：配置 API Base URL 和后台口令、创建知识库、上传文件或粘贴文本/Markdown 入库、按分类筛选/分页展示文档、配置 Bot/Widget、复制一行 script、测试流式问答并查看 sources。
+- 管理控制台：使用构建时 `VITE_API_BASE_URL` 连接后端，配置后台口令、创建知识库、上传文件或粘贴文本/Markdown 入库、按分类筛选/分页展示文档、配置 Bot/Widget、复制一行 script、测试流式问答并查看 sources。
 - Widget 聊天页：`/widget-chat?widgetId=...`，由 iframe 加载，默认请求同源 `/api`，展示 header、bot name/avatar、欢迎消息、消息时间和流式回答。
 - SDK 脚本：`public/widget.js`，外站只需粘贴一行 `<script>` 即可生成悬浮入口和 iframe。
 
@@ -15,9 +15,18 @@ bun install
 bun run dev
 ```
 
-默认 Vite 地址通常是 `http://localhost:5173/`。打开控制台后填写：
+复制前端环境变量示例并按需修改后端 API 地址：
 
-- API Base URL：后端 API 地址，例如 `http://localhost:9889/api`
+```bash
+cp .env.example .env
+```
+
+```env
+VITE_API_BASE_URL=http://localhost:9889/api
+```
+
+默认 Vite 地址通常是 `http://localhost:5173/`。打开控制台后只需填写：
+
 - 后台口令 / API Key：后端 `.env` 中的 `ADMIN_API_KEY`
 
 ## 构建与验证
