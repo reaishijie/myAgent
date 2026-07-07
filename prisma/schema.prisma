@@ -46,18 +46,100 @@ model User {
   @@map("users")
 }
 
-model KnowledgeDocument {
-  id        Int              @id @default(autoincrement())
-  title     String           @db.VarChar(120)
-  content   String
-  contentHash String?        @unique @map("content_hash") @db.VarChar(64)
-  metadata  Json?
-  createdAt DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  chunks    KnowledgeChunk[]
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
 
+model KnowledgeBase {
+  id          Int                 @id @default(autoincrement())
+  name        String              @db.VarChar(80)
+  description String?
+  createdAt   DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime?           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  documents   KnowledgeDocument[]
+  widgets     Widget[]
+  sessions    ChatSession[]
+
+  @@index([createdAt], map: "knowledge_base_created_idx")
+  @@map("knowledge_bases")
+}
+
+model KnowledgeDocument {
+  id              Int              @id @default(autoincrement())
+  knowledgeBaseId Int?             @map("knowledge_base_id")
+  title           String           @db.VarChar(120)
+  category        String?          @db.VarChar(80)
+  content         String
+  contentHash     String?          @map("content_hash") @db.VarChar(64)
+  fileName        String?          @map("file_name") @db.VarChar(255)
+  mimeType        String?          @map("mime_type") @db.VarChar(120)
+  fileSize        Int?             @map("file_size")
+  fileHash        String?          @map("file_hash") @db.VarChar(64)
+  parseStatus     String           @default("COMPLETED") @map("parse_status") @db.VarChar(20)
+  parseError      String?          @map("parse_error")
+  metadata        Json?
+  createdAt       DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  knowledgeBase   KnowledgeBase?   @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
+  chunks          KnowledgeChunk[]
+
+  @@unique([knowledgeBaseId, contentHash], map: "knowledge_document_kb_hash_unique")
+  @@index([knowledgeBaseId], map: "knowledge_document_knowledge_base_idx")
+  @@index([knowledgeBaseId, category], map: "knowledge_document_kb_category_idx")
+  @@index([fileHash], map: "knowledge_document_file_hash_idx")
   @@index([createdAt], map: "knowledge_document_created_idx")
   @@map("knowledge_documents")
+}
+
+model Widget { 
+  id              String        @id @default(cuid()) @db.VarChar(32)
+  knowledgeBaseId Int           @map("knowledge_base_id")
+  title           String        @db.VarChar(80)
+  botName         String        @default("AI Assistant") @map("bot_name") @db.VarChar(80)
+  botAvatar       String?       @map("bot_avatar") @db.VarChar(255)
+  welcomeMessage  String?       @map("welcome_message")
+  systemPrompt    String?       @map("system_prompt")
+  isEnabled       Boolean       @default(true) @map("is_enabled")
+  createdAt       DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  sessions        ChatSession[]
+
+  @@index([knowledgeBaseId], map: "widget_knowledge_base_idx")
+  @@index([isEnabled], map: "widget_enabled_idx")
+  @@map("widgets")
+}
+
+model ChatSession {
+  id              String        @id @default(cuid()) @db.VarChar(32)
+  widgetId        String        @map("widget_id") @db.VarChar(32)
+  knowledgeBaseId Int           @map("knowledge_base_id")
+  visitorId       String?       @map("visitor_id") @db.VarChar(120)
+  title           String?       @db.VarChar(120)
+  createdAt       DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  widget          Widget        @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  messages        ChatMessage[]
+
+  @@index([widgetId, createdAt], map: "chat_session_widget_created_idx")
+  @@index([visitorId], map: "chat_session_visitor_idx")
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        Int             @id @default(autoincrement())
+  sessionId String          @map("session_id") @db.VarChar(32)
+  role      ChatMessageRole
+  content   String
+  metadata  Json?
+  createdAt DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
+  session   ChatSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt], map: "chat_message_session_created_idx")
+  @@map("chat_messages")
 }
 
 model KnowledgeChunk {

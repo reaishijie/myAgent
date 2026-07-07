@@ -1,4 +1,5 @@
 # Repository Guidelines
+开发基于feat/rag分支
 
 ## Project Structure & Module Organization
 

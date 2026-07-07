@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { Logger } from './utils/logger'
 import { customLogger } from './middleware/httpLogger.middleware'
 import { BusinessException } from './core/exceptions'
@@ -9,6 +10,35 @@ export const createApp = () => {
   const errorLogger = new Logger('ExceptionFilter')
 
   app.use('*', customLogger())
+  app.use('/api/widgets/*', cors({
+    origin: '*',
+    allowHeaders: ['content-type'],
+    allowMethods: ['GET', 'OPTIONS'],
+  }))
+  app.use('/api/chat/*', cors({
+    origin: '*',
+    allowHeaders: ['content-type'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+  }))
+  const ragQueryCors = cors({
+    origin: '*',
+    allowHeaders: ['content-type', 'authorization', 'x-admin-api-key'],
+    allowMethods: ['POST', 'OPTIONS'],
+  })
+  app.use('/api/rag/query', ragQueryCors)
+  app.use('/api/rag/query/*', ragQueryCors)
+  app.use('/api/admin/*', cors({
+    origin: '*',
+    allowHeaders: ['content-type', 'authorization', 'x-admin-api-key'],
+    allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+  }))
+  const documentCors = cors({
+    origin: '*',
+    allowHeaders: ['content-type', 'authorization', 'x-admin-api-key'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+  })
+  app.use('/api/rag/documents', documentCors)
+  app.use('/api/rag/documents/*', documentCors)
 
   app.get('/', (c) => {
     return c.json({ code: 200, status: 'ok', message: 'Backend service is healthy' })

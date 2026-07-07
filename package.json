@@ -14,10 +14,12 @@
     "db:migrate:deploy": "bunx --bun prisma migrate deploy"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
-    "@hono/zod-validator": "^0.7.6",
     "hono": "^4.12.8",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.16.3",
     "zod": "^4.3.6"
   },
