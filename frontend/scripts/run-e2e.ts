@@ -1,6 +1,6 @@
 import { createServer } from 'node:net'
 
-const rootDir = new URL('../..', import.meta.url).pathname
+const backendDir = new URL('../../backend', import.meta.url).pathname
 const frontendDir = new URL('..', import.meta.url).pathname
 const localLibraryPath = '/tmp/playwright-libs/extracted/usr/lib/x86_64-linux-gnu'
 
@@ -108,10 +108,10 @@ const waitFor = async (url: string, label: string, service: ReturnType<typeof ru
 
 const services = [
   run('mock provider', ['bun', 'scripts/mock-openai-provider.ts'], {
-    cwd: rootDir,
+    cwd: backendDir,
     env: { ...baseEnv, MOCK_OPENAI_PORT: String(mockPort) },
   }),
-  run('backend', ['bun', 'src/index.ts'], { cwd: rootDir, env: backendEnv }),
+  run('backend', ['bun', 'src/index.ts'], { cwd: backendDir, env: backendEnv }),
   run('frontend', ['bun', './node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', String(frontendPort), '--strictPort'], {
     cwd: frontendDir,
     env: frontendEnv,

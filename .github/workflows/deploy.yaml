@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - feat/rag
+      - main
   workflow_dispatch:
     inputs:
       target:
@@ -53,16 +53,20 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+        working-directory: backend
 
       - name: Generate Prisma client
         run: bun run db:generate
+        working-directory: backend
 
       - name: Run tests
         run: bun test
+        working-directory: backend
 
       - name: Build FC bundle
         if: env.DEPLOY_TARGET == 'fc'
         run: bun run build:fc
+        working-directory: backend
 
       - name: Install Serverless Devs
         if: env.DEPLOY_TARGET == 'fc'
@@ -81,9 +85,11 @@ jobs:
       - name: Deploy to Alibaba Cloud FC
         if: env.DEPLOY_TARGET == 'fc'
         run: s deploy -y
+        working-directory: backend
 
       - name: Configure Cloudflare runtime secrets
         if: env.DEPLOY_TARGET == 'cloudflare'
+        working-directory: backend
         run: |
           set -euo pipefail
           put_secret() {
@@ -111,3 +117,4 @@ jobs:
       - name: Deploy to Cloudflare Workers
         if: env.DEPLOY_TARGET == 'cloudflare'
         run: bun run deploy:cf
+        working-directory: backend

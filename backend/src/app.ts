@@ -4,6 +4,7 @@ import { Logger } from './utils/logger'
 import { customLogger } from './middleware/httpLogger.middleware'
 import { BusinessException } from './core/exceptions'
 import apiRouter from './routes'
+import { createStaticAssetsMiddleware } from './staticAssets'
 
 export const createApp = () => {
   const app = new Hono()
@@ -40,9 +41,12 @@ export const createApp = () => {
   app.use('/api/rag/documents', documentCors)
   app.use('/api/rag/documents/*', documentCors)
 
-  app.get('/', (c) => {
-    return c.json({ code: 200, status: 'ok', message: 'Backend service is healthy' })
-  })
+  const staticRoot = process.env.STATIC_ROOT || './public'
+  app.use('*', createStaticAssetsMiddleware(staticRoot))
+
+  const healthResponse = { code: 200, status: 'ok', message: 'Backend service is healthy' }
+  app.get('/', (c) => c.json(healthResponse))
+  app.get('/health', (c) => c.json(healthResponse))
 
   app.route('/api', apiRouter)
 
