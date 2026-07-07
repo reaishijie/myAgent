@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { ApiResponse } from '../core/response'
 import { ChatSessionService } from '../services/chatSession.service'
+import { Logger } from '../utils/logger'
 
 const sessionIdParamSchema = z.object({
   sessionId: z.string().trim().min(1),
@@ -26,6 +27,7 @@ const sendMessageSchema = z.object({
 })
 
 const chatApp = new Hono()
+const chatLogger = new Logger('ChatRoute')
 
 chatApp.post('/sessions', zValidator('json', createSessionSchema), async (c) => {
   const data = c.req.valid('json')
@@ -61,8 +63,10 @@ chatApp.post('/sessions/:sessionId/messages/stream', zValidator('param', session
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Stream failed'
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`))
+        const detail = error instanceof Error ? error.message : String(error)
+        const trace = error instanceof Error ? error.stack : undefined
+        chatLogger.error(`[StreamError] ${detail}`, trace)
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: '回答失败，请稍后重试。' })}\n\n`))
       } finally {
         controller.close()
       }
