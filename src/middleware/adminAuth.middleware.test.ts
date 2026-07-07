@@ -6,6 +6,7 @@ import { requireAdminApiKey } from './adminAuth.middleware'
 const createTestApp = () => {
   const app = new Hono()
   app.use('*', requireAdminApiKey())
+  app.options('/admin-only', (c) => c.body(null, 204))
   app.get('/admin-only', (c) => c.json({ ok: true }))
   app.onError((err, c) => {
     if (err instanceof BusinessException) {
@@ -48,4 +49,20 @@ test('admin auth accepts x-admin-api-key', async () => {
 
   expect(response.status).toBe(200)
   expect(await response.json()).toEqual({ ok: true })
+})
+
+test('admin auth skips OPTIONS preflight without api key', async () => {
+  delete process.env.ADMIN_API_KEY
+  const app = createTestApp()
+
+  const response = await app.request('/admin-only', {
+    method: 'OPTIONS',
+    headers: {
+      origin: 'http://127.0.0.1:5173',
+      'access-control-request-method': 'GET',
+      'access-control-request-headers': 'x-admin-api-key,content-type',
+    },
+  })
+
+  expect(response.status).toBe(204)
 })
