@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!backend/.env.example
+!deploy/.env.docker.example
+**/node_modules
+**/dist
+**/.wrangler
+**/bun-layer.zip
+.DS_Store
+*.log
+coverage
+playwright-report
+test-results
+.flow
