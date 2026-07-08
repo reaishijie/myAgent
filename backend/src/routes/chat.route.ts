@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { ApiResponse } from '../core/response'
 import { ChatSessionService } from '../services/chatSession.service'
+import { Logger } from '../utils/logger'
 
 const sessionIdParamSchema = z.object({
   sessionId: z.string().trim().min(1),
@@ -26,6 +27,7 @@ const sendMessageSchema = z.object({
 })
 
 const chatApp = new Hono()
+const streamLogger = new Logger('ChatStream')
 
 chatApp.post('/sessions', zValidator('json', createSessionSchema), async (c) => {
   const data = c.req.valid('json')
@@ -62,6 +64,8 @@ chatApp.post('/sessions/:sessionId/messages/stream', zValidator('param', session
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Stream failed'
+        const trace = error instanceof Error ? error.stack : undefined
+        streamLogger.error(`session=${sessionId} stream failed: ${message}`, trace)
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`))
       } finally {
         controller.close()
